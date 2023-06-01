@@ -1,6 +1,7 @@
 module Squarefree where
 
 import Polynomial
+import Ring
 
 -- yun :: Polynomial -> Polynomial
 -- yun p 
@@ -26,9 +27,9 @@ yun2 b d
         in
         a * (yun2 b' d')
 
-type Factors r = (Polynomial r, Int)
+type Factors r = (Polynomial r, Integer)
             
-yun :: Ring r => Int -> Polynomial r -> Polynomial r -> [Factors r]
+yun :: Ring r => Integer -> Polynomial r -> Polynomial r -> [Factors r]
 yun i b d
     | degree b == 0 = [(b, i)]
     | otherwise = let
