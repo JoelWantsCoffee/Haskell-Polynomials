@@ -7,6 +7,7 @@ pkgs.mkShell {
     pkgs.haskellPackages.stack
     pkgs.haskellPackages.either
     pkgs.haskellPackages.matrix
+    pkgs.haskellPackages.reflection
     # pkgs.haskellPackages.hmatrix
     pkgs.git
   ];
@@ -15,7 +16,7 @@ pkgs.mkShell {
     export LANG="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"
     export GHC_COLORS="always"
-    cabal install either matrix --lib --force-reinstalls
+    cabal install either matrix reflection --lib --force-reinstalls
     ghci Factor.hs
   '';
 }

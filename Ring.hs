@@ -1,15 +1,19 @@
+{-# LANGUAGE DataKinds #-}
+
 module Ring where
 
 import Data.FiniteField.PrimeField
 import GHC.TypeNats
 
-class (Num a, Eq a) => Ring a where -- more like GcdDomain a
+class (Num a, Eq a) => Ring a where -- really a GCD Domain
     (//) :: a -> a -> a
     (%)  :: a -> a -> a
     div_ :: a -> a -> (a,a)
     gcd_ :: a -> a -> a
     isUnit :: a -> Bool
 
+class Factorable a where
+    factor :: a -> [a]
 
 instance KnownNat p => Ring (PrimeField p) where
     (%) a b = 0

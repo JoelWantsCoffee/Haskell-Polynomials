@@ -3,6 +3,7 @@ import Berlekamp
 import Polynomial
 import Ring
 import Squarefree
+import Hensel
 import Data.FiniteField.PrimeField
 import GHC.TypeNats
 
@@ -48,10 +49,10 @@ ggg = simplify $ Product (Sum (Monomial 1 1) (Monomial 1 0)) (Sum (Monomial 1 2)
 -- p :: Polynomial Rational
 -- p = Product f a 
 
-h :: Polynomial Rational
-h = Sum (Sum (Monomial 1 4) (Monomial (-1) 2)) (Sum (Monomial (-1) 1) (Monomial (-1) 0))
+hh :: Polynomial Integer
+hh = Sum (Sum (Monomial 1 4) (Monomial (-1) 2)) (Sum (Monomial (-1) 1) (Monomial (-1) 0))
 
-hhh :: Polynomial (PrimeField 13)
+hhh :: Polynomial (PrimeField 7)
 hhh = Sum (Sum (Monomial 1 4) (Monomial (-1) 2)) (Sum (Monomial (-1) 1) (Monomial (-1) 0))
 
 -- k = simplify (Sum a f)

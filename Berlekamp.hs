@@ -5,10 +5,10 @@ import Polynomial
 import Ring
 
 import Data.Matrix (Matrix, fromLists, toLists, identity, rref, (<|>), splitBlocks)
-import qualified Data.Ratio as Ratio
-import qualified Data.Either.Combinators as Either
+import Data.Ratio qualified as Ratio
+import Data.Either.Combinators qualified as Either
 import GHC.Base (Double)
-import qualified Data.List as List
+import Data.List qualified as List
 import Data.FiniteField.PrimeField
 import GHC.TypeNats
 
@@ -40,14 +40,13 @@ unfill =
     $ zipWith Monomial lst [0 ..]
   )
 
-nullspaceBasis :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-nullspaceBasis p = 
-  Either.fromRight []
-  $ Either.mapRight unfill 
-  $ Either.mapRight (fmap (\lst -> drop (length lst `div` 2 ) lst))
-  $ Either.mapRight toLists
-  $ rref 
-  $ formauto p
+nullspaceBasis :: KnownNat p => Matrix (PrimeField p) -> [ Polynomial (PrimeField p) ]
+nullspaceBasis = 
+  (Either.fromRight $ error "i think the rref function sucks at its job")
+  . (Either.mapRight unfill)
+  . (Either.mapRight $ fmap (\lst -> drop (length lst `div` 2 ) lst))
+  . (Either.mapRight toLists)
+  . rref
 
 berlekampGcds :: KnownNat p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 berlekampGcds f g = fmap ( \i -> ( gcd_ f (g - (fromIntegral i)) ) ) [0..(fieldOrder f)]
@@ -61,7 +60,7 @@ possibleFactors p =
   $ List.nub
   $ fmap simplify
   $ List.concatMap (berlekampGcds p)
-  $ nullspaceBasis p
+  $ nullspaceBasis (formauto p)
 
 
 sqfrFactors :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
@@ -73,8 +72,8 @@ sqfrFactors p =
   $ fmap (simplify . gcd_ p)
   $ possibleFactors p
 
-factors :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-factors = 
+berlekamp :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
+berlekamp = 
   List.nub
   . (fmap simplify)
   . (fmap coerceMonic)
@@ -82,5 +81,5 @@ factors =
   . possibleFactors
   . squareFree
 
-berlekamp :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-berlekamp = factors
+instance KnownNat p => Factorable (Polynomial (PrimeField p)) where
+  factor = berlekamp

@@ -203,7 +203,6 @@ simplify = knockThemDown . sortThemOut . setThemUp
 isConstant :: Ring r => Polynomial r -> Bool
 isConstant = (==) 0 . degree
 
-
 pow :: Ring r => Polynomial r -> Integer -> Polynomial r
 pow p n = foldr Product (Monomial 1 0) $ (L.take . fromIntegral) n $ L.repeat p
 
@@ -216,7 +215,7 @@ coeffHelp i (Sum b (Monomial  c d)) = if d == i then c else coeffHelp i b
 coeffHelp i (Monomial  c d) = if d == i then c else 0
 
 fieldOrder :: (KnownNat p) => Polynomial (PrimeField p) -> Integer
-fieldOrder (Monomial c _) = (read . show . natVal) c -- TODO FIX THIS GARBO
+fieldOrder (Monomial c _) = (fromIntegral . natVal) c
 fieldOrder (Sum a _) = fieldOrder a
 fieldOrder (Product a _) = fieldOrder a
 
