@@ -11,6 +11,7 @@ class (Num a, Eq a) => Ring a where -- really a GCD Domain
     div_ :: a -> a -> (a,a)
     gcd_ :: a -> a -> a
     isUnit :: a -> Bool
+    isZero :: a -> Bool
 
 class Factorable a where
     factor :: a -> [a]
@@ -23,6 +24,7 @@ instance KnownNat p => Ring (PrimeField p) where
         | otherwise = b
     div_ a b = (a / b, 0)
     isUnit = (/=) 0
+    isZero = (==) 0
 
 instance Ring Rational where
     (%) a b = 0
@@ -32,6 +34,7 @@ instance Ring Rational where
         | a > b = a
         | otherwise = b
     isUnit = (/=) 0
+    isZero = (==) 0
 
 instance Ring Integer where
     (%) = mod
@@ -41,3 +44,4 @@ instance Ring Integer where
     isUnit 1 = True
     isUnit (-1) = True
     isUnit _ = False
+    isZero = (==) 0

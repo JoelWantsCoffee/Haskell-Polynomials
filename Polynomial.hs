@@ -1,5 +1,4 @@
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE UndecidableInstances, DataKinds, DeriveAnyClass #-}
 
 module Polynomial where
 
@@ -18,16 +17,37 @@ data Polynomial r
             | Product (Polynomial r) (Polynomial r) 
             deriving Eq
 
+--
+-- tag stuff?
+--
+
 data T a b = T b -- tag
 type a ~~ b = T a b
 
-data Flat = Flat
-data Sorted = Sorted
-data Mono = Mono
+class IsFlat a
+class IsSorted a
+class IsMerged a
+class IsMono a
+
+data Flat = Flat deriving (IsFlat)
+data Sorted = Sorted deriving (IsFlat, IsSorted)
+data Merged = Merged deriving (IsFlat, IsSorted, IsMerged)
+data Mono = Mono deriving (IsFlat, IsSorted, IsMerged, IsMono)
+
+setThemUp2 :: Ring r => t ~~ (Polynomial r) -> Flat ~~ (Polynomial r)
+setThemUp2 = undefined
+sortThemOut2 :: (IsFlat t, Ring r) => t ~~ (Polynomial r) -> Sorted ~~ (Polynomial r)
+sortThemOut2 = undefined
+knockThemDown2 :: (IsSorted t, Ring r) => t ~~ (Polynomial r) -> Merged ~~ (Polynomial r)
+knockThemDown2 = undefined
 
 instance Functor (T a) where
     fmap :: (b -> c) -> (T a b) -> (T a c)
     fmap f (T b) = T (f b)
+
+--
+-- end tag stuff.
+--
 
 instance Num r => Num (Polynomial r) where
     (+) = Sum
@@ -53,6 +73,7 @@ instance Ring r => Ring (Polynomial r) where
     gcd_ = gcdPoly
     div_ = divide
     isUnit p = (isConstant p) && (isUnit $ leadingCoeff p)
+    isZero p = foldr (\t r -> (t == 0) && r) True $ simplify p
 
 showCoeff :: Rational -> Bool -> String
 showCoeff c b
@@ -141,10 +162,6 @@ gcdPoly f g
     where
         ng = fmap (\x -> x // gcdAll (simplify g)) (simplify g)
 
-
-isZero :: Ring r => Polynomial r -> Bool
-isZero p = foldr (\t r -> (t == 0) && r) True $ simplify p
-
 -- differentiate
 differentiate :: Ring r => Polynomial r -> Polynomial r
 differentiate (Monomial a b)
@@ -222,7 +239,23 @@ fieldOrder (Product a _) = fieldOrder a
 fromRing :: r -> Polynomial r
 fromRing r = Monomial r 0
 
+evaluate :: Ring r => r -> Polynomial r -> r
+evaluate r (Monomial c d) = c * (r ^ d)
+evaluate r (Sum a b) = (evaluate r a) + (evaluate r b)
+evaluate r (Product a b) = (evaluate r a) * (evaluate r b)
+
 coerceMonic :: Ring r => Polynomial r -> Polynomial r
 coerceMonic p = if isUnit lc then (fromRing $ 1 // lc) * p else p
     where
         lc = leadingCoeff p
+
+
+roots2_ :: Ring r => Polynomial r -> [r]
+roots2_ (Sum (Monomial 1 1) (Monomial a 0)) = [ -a ]
+-- roots2_ (Sum (Monomial 1 2) (Sum (Monomial b 1) (Monomial c 0))) = [(-b + (sqrt (b^2 - 4 * c))) // 2, (-b - (sqrt (b^2 - 4 * c))) // 2]
+
+roots2 :: Ring r => Polynomial r -> [r]
+roots2 = roots2_ . simplify
+
+roots :: (Ring r, Factorable (Polynomial r)) => Polynomial r -> [r]
+roots = L.concat . fmap roots2 . factor
