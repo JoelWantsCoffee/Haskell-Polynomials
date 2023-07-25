@@ -73,7 +73,7 @@ instance Ring r => Ring (Polynomial r) where
     gcd_ = gcdPoly
     div_ = divide
     isUnit p = (isConstant p) && (isUnit $ leadingCoeff p)
-    isZero p = foldr (\t r -> (t == 0) && r) True $ simplify p
+    isZero p = foldr (\t r -> isZero t && r) True $ simplify p
 
 showCoeff :: Rational -> Bool -> String
 showCoeff c b
@@ -83,7 +83,8 @@ showCoeff c b
     | R.numerator c == 0 = "0"
     | otherwise = show (R.numerator c) ++ "/" ++ show (R.denominator c)
 
-instance (Show r, Ring r) => Show (Polynomial r) where
+
+instance (Show r) => Show (Polynomial r) where
     show :: Polynomial r -> String
     show (Monomial c d)
         | d == 1 = show c ++ "x"
@@ -103,11 +104,14 @@ instance {-# OVERLAPS #-} Show (Polynomial Rational) where
     -- show (Gcd a b) = "GCD(" ++ show a ++ ", " ++ show b ++ ")"
     -- show (Differentiate a) = "(d/dx)[" ++ show a ++ "]"
 
-degree :: Ring r => (Polynomial r) -> Degree
-degree (Monomial 0 deg) = 0
-degree (Monomial _ deg) = deg
-degree (Sum p1 p2) = max (degree p1) (degree p2)
-degree (Product p1 p2) = degree p1 + degree p2
+degree_ :: Ring r => Polynomial r -> Degree
+degree_ (Monomial 0 deg) = 0
+degree_ (Monomial _ deg) = deg
+degree_ (Sum p1 p2) = max (degree p1) (degree p2)
+degree_ (Product p1 p2) = degree p1 + degree p2
+
+degree :: Ring r => Polynomial r -> Degree
+degree = degree_ . simplify
 -- degree a = degree $ expand a
 
 leadingTerm :: Ring r => Polynomial r -> Polynomial r
@@ -249,9 +253,15 @@ coerceMonic p = if isUnit lc then (fromRing $ 1 // lc) * p else p
     where
         lc = leadingCoeff p
 
+data C = C 
+
+instance Show C where
+    show C = "c"
 
 roots2_ :: Ring r => Polynomial r -> [r]
 roots2_ (Sum (Monomial 1 1) (Monomial a 0)) = [ -a ]
+-- roots2_ _ = []
+roots2_ a = error $ "\"" ++ show (fmap (\_ -> C) a) ++ "\" could have multiple roots"
 -- roots2_ (Sum (Monomial 1 2) (Sum (Monomial b 1) (Monomial c 0))) = [(-b + (sqrt (b^2 - 4 * c))) // 2, (-b - (sqrt (b^2 - 4 * c))) // 2]
 
 roots2 :: Ring r => Polynomial r -> [r]
@@ -259,3 +269,6 @@ roots2 = roots2_ . simplify
 
 roots :: (Ring r, Factorable (Polynomial r)) => Polynomial r -> [r]
 roots = L.concat . fmap roots2 . factor
+
+x :: Ring r => Polynomial r
+x = Monomial 1 1

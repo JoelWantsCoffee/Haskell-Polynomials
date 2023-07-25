@@ -26,8 +26,6 @@ d = (Monomial 15 0)
 e :: Polynomial Integer
 e = (Monomial 9 0)
 
-x = Monomial 1 1
-
 -- x :: Polynomial Rational
 -- x = (Monomial 1 1) * (Monomial 3 0)
 -- f :: Polynomial Rational
@@ -35,8 +33,8 @@ x = Monomial 1 1
 -- f' :: Polynomial Rational
 -- f' = differentiate f
 
-g :: Polynomial Rational
-g = simplify $ Product (Sum (Monomial 1 1) (Monomial 1 0)) (Sum (Monomial 1 2) (Monomial 1 0))
+-- g :: Polynomial Rational
+-- g = simplify $ Product (Sum (Monomial 1 1) (Monomial 1 0)) (Sum (Monomial 1 2) (Monomial 1 0))
 
 gg :: Polynomial Integer
 gg = simplify $ Product (Sum (Monomial 1 1) (Monomial 1 0)) (Sum (Monomial 1 2) (Monomial 1 0))
@@ -54,10 +52,13 @@ fac1 = simplify $ (Monomial 1 1) + (Monomial 5 0) :: Polynomial Integer
 hh :: Polynomial Integer
 hh = Sum (Sum (Monomial 1 4) (Monomial (-1) 2)) (Sum (Monomial (-1) 1) (Monomial (-1) 0))
 
-hhh :: Polynomial (PrimeField 7)
+hhh :: Polynomial (PrimeField 13)
 hhh = Sum (Sum (Monomial 1 4) (Monomial (-1) 2)) (Sum (Monomial (-1) 1) (Monomial (-1) 0))
 
--- k = simplify (Sum a f)
+f = hh
+out = recombine @(7^3) f $ simplify <$> liftN2 @7 @3 f
+-- out = simplify <$> (fmap (fromInteger :: Integer -> PrimeField (7^2))) <$> [g', h']
+
 
 
 test :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
