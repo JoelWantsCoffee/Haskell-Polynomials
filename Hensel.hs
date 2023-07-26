@@ -54,6 +54,8 @@ bezoutGcd a b =
 
 {-
 
+https://en.wikipedia.org/wiki/Hensel%27s_lemma#Linear_lifting
+
 f === gh    mod p^k
 
 take 
@@ -71,16 +73,16 @@ lift2 :: forall (pk1 :: Nat). KnownNat pk1
     -> (Polynomial Integer, Polynomial Integer)
     -> (Polynomial Integer, Polynomial Integer)
     -> (Polynomial Integer, Polynomial Integer)
-lift2 f (a,b) (g,h) = ( PrimeField.toInteger <$> (fromInteger <$> g) + d, PrimeField.toInteger <$> (fromInteger <$> h) + c)
+lift2 f (a,b) (g,h) = ( toIntegerNormal <$> (fromInteger <$> g) + d, PrimeField.toInteger <$> (fromInteger <$> h) + c)
     where
         delta :: Polynomial (PrimeField pk1)
         delta = simplify $ fromInteger <$> f - g * h
 
         c :: Polynomial (PrimeField pk1)
-        c = fromInteger <$> (a * (PrimeField.toInteger <$> delta)) % h
+        c = fromInteger <$> (a * (toIntegerNormal <$> delta)) % h
 
         d :: Polynomial (PrimeField pk1)
-        d = fromInteger <$> (b * (PrimeField.toInteger <$> delta)) % g
+        d = fromInteger <$> (b * (toIntegerNormal <$> delta)) % g
 
 
 do_lift2 :: (Natural, Natural)
@@ -91,22 +93,21 @@ do_lift2 (p,k) f (g,h) =
     reifyNat (fromIntegral p) ( 
         \(_ :: Proxy p) -> 
             let (r,a,b) = extendedGcd @(Polynomial (PrimeField p)) (fromInteger <$> g) (fromInteger <$> h)
-            in reifyNat (fromIntegral (p^(k+1))) ( \(_ :: Proxy pk1) -> lift2 @pk1 f (PrimeField.toInteger <$> a // r, PrimeField.toInteger <$> b // r) (g,h) )
+            in reifyNat (fromIntegral (p^(k+1))) ( \(_ :: Proxy pk1) -> lift2 @pk1 f (toIntegerNormal <$> a // r, toIntegerNormal <$> b // r) (g,h) )
     )
 
 
-        
 
-liftN2 :: forall (p :: Nat) (k :: Nat) . (KnownNat p, KnownNat k,  KnownNat (p^k))
+liftN2 :: forall (p :: Nat) (k :: Nat) . (KnownNat p, KnownNat k, KnownNat (p^k))
     => Polynomial Integer 
     -> [Polynomial (PrimeField (p^k))]
-liftN2 poly = (fmap fromInteger . fst . lift_) <$> (break [] $ factorInField p poly)
+liftN2 poly = (fmap fromInteger . snd . lift_) <$> (break [] $ factorInField p poly)
     where
         lift_ :: (Polynomial Integer, Polynomial Integer) -> (Polynomial Integer, Polynomial Integer)
-        lift_ = foldl (.) id ((\k_ -> do_lift2 (natVal (Proxy :: Proxy p), k_) poly ) <$> (List.reverse [1..(k - 1)]))
+        lift_ = foldr (.) id ((\k_ -> do_lift2 (natVal (Proxy :: Proxy p), k_) poly ) <$> (List.reverse [1..(k - 1)]))
         
         break :: Ring r => [(Polynomial r)] -> [(Polynomial r)] -> [(Polynomial r, Polynomial r)]
-        break prev (h:t) = (h, simplify $ foldr (*) 1 (prev ++ t)) : (break (h:prev) t)
+        break prev (h:t) = (foldr (*) 1 (prev ++ t), h) : (break (h:prev) t)
         break _ [] = []
         
         k = natVal $ (Proxy :: Proxy k)
@@ -150,8 +151,6 @@ t === (- f(a) / p^m) / (f'(a)) (mod p)
 
 find solve this equation to find t.
 
-
-
 -}
 lift :: forall (p :: Nat) (k :: Nat). (KnownNat p, KnownNat k)
     => Polynomial Integer
@@ -172,6 +171,12 @@ lift f a = fromIntegral $ a + t * (p^k)
 -- https://www.cmi.ac.in/~ramprasad/lecturenotes/comp_numb_theory/lecture26.pdf
 
 
+toIntegerNormal :: forall (p :: Nat). KnownNat p => PrimeField p -> Integer
+toIntegerNormal c_ = if c < ( p `div` 2) then c else c - p
+    where
+        c = (PrimeField.toInteger c_) `mod` p
+        p = fromIntegral $ natVal (Proxy :: Proxy p)
+
 liftN :: forall (p :: Nat) (k :: Nat) . (KnownNat p, KnownNat k,  KnownNat (p^k)) 
     => Polynomial Integer 
     -> [Polynomial (PrimeField (p^k))]
@@ -189,10 +194,10 @@ factorize_linear :: Polynomial Integer -> [Polynomial Integer]
 factorize_linear p = recombine p $ liftN @13 @6 p
 
 factorize_nonlinear :: Polynomial Integer -> [Polynomial Integer]
-factorize_nonlinear p = recombine p $ simplify <$> liftN2 @13 @6 p
+factorize_nonlinear p = recombine p $ simplify <$> liftN2 @13 @2 p
 
 -- The-art-of-computer-programming.-Vol.2.-Seminumerical-algorithms-by-Knuth-Donald PAGE 452 F2
-recombine :: KnownNat m => Polynomial Integer -> [Polynomial (PrimeField m)] -> [Polynomial Integer]
+recombine :: forall (m :: Nat). KnownNat m => Polynomial Integer -> [Polynomial (PrimeField m)] -> [Polynomial Integer]
 recombine f lst = recombine_ 1 f lst
 
 recombine_ :: forall (m :: Nat). KnownNat m 
@@ -202,34 +207,23 @@ recombine_ :: forall (m :: Nat). KnownNat m
     -> [Polynomial Integer]
 recombine_ d poly polys =
         if d > r
-        then []
-        else (++) out 
+        then [] 
+        else (++) out
             $ recombine_ (d + 1) poly remaining
     where
         remaining = polys List.\\ (List.concat remove)
         (remove, out) = unzip $ List.filter ( \(_, p) -> isZero $ (poly % p) ) vbars
-        vbars = (\lst -> (lst, fmap (normalise . PrimeField.toInteger) $ simplify $ foldr1 (*) lst)) <$> choices
+        vbars = (\lst -> (lst, fmap toIntegerNormal $ simplify $ foldr1 (*) lst)) <$> choices
         choices = Combinatorics.tuples (fromInteger d) polys
         m = fromIntegral $ natVal (Proxy :: Proxy m)
         r = fromIntegral $ List.length polys
-        normalise = \c -> if c < (m `div` 2) then c else c - m
 
-
---  _ f_ (g_,h_) = (simplify $ g + (simplify a_) * scale * pk, simplify $ h + (simplify b_) * scale * pk)
---     where
---         pk = fromRing . fromIntegral . natVal $ (Proxy :: Proxy (p^k))
---         scale = simplify $ (f - g * h)
---         (a_, b_, gcd) = extendedGcd g h
---         castCoeffs x = (fromIntegral x) :: PrimeField (p^(k+1))
---         f = fmap ( castCoeffs ) f_
---         g = fmap ( castCoeffs . PrimeField.toInteger ) g_
---         h = fmap ( castCoeffs . PrimeField.toInteger ) h_
 
 hasMultipleRoots :: KnownNat p => Polynomial (PrimeField p) -> Bool
 hasMultipleRoots p = (/=) (fromRing 1) (simplify $ gcd_ p (differentiate p))
 
 factorInField :: Natural -> Polynomial Integer -> [ Polynomial Integer ]
-factorInField = funcInField (fmap (fmap PrimeField.toInteger . simplify) . factor)
+factorInField = funcInField (fmap (fmap toIntegerNormal . simplify) . factor)
 
 funcInField :: (forall (p :: Nat). KnownNat p => Polynomial (PrimeField p) -> r) -> Natural -> Polynomial Integer  -> r
 funcInField func n poly = 
