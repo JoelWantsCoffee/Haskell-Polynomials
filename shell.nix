@@ -18,6 +18,6 @@ pkgs.mkShell {
     export LC_ALL="en_US.UTF-8"
     export GHC_COLORS="always"
     cabal install either matrix reflection combinatorial --lib --force-reinstalls
-    ghci Factor.hs
+    cabal repl
   '';
 }

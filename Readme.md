@@ -1,9 +1,20 @@
+# Factoring Polynomials in Haskell
 
-Data AnyPrime = AnyPrime (forall p. KnownNat p => PrimeField p)
+## Setup
 
+install `nix`
 
+clone repo
 
-4 3 -> 4 mod 4
+run `nix-shell`
 
-toPrimeField : Natural -> Integer -> AnyPrime
-toPrimeField 
+## Usage
+
+Use the `Factorable` typeclass to factor polynomials.
+
+```haskell
+class Factorable a where
+    factor :: a -> [a]
+```
+
+Currently, `Polynomial (PrimeField p)` is the only instance.
