@@ -1,47 +1,37 @@
-module Berlekamp where
+module Polynomial.Berlekamp where
 
-import Squarefree
-import Polynomial
-import Ring
-import CustomMatrix
+import Polynomial.Squarefree
+import Polynomial.Polynomial
+import Polynomial.Ring
+import Polynomial.CustomMatrix
 
-import Data.Matrix (Matrix, fromLists, toLists, identity, rref, (<|>), splitBlocks)
-import Data.Ratio qualified as Ratio
+import Data.Matrix (Matrix, fromLists, toLists, identity, rref, (<|>))
 import Data.Either.Combinators qualified as Either
-import GHC.Base (Double)
 import Data.List qualified as List
 import Data.FiniteField.PrimeField
 import GHC.TypeNats
-
-
-xnmodf :: Ring r => Degree -> Polynomial r -> Polynomial r
-xnmodf n f = (Monomial 1 n) % f
-
-toRowVec :: Ring r => Integer -> Polynomial r -> [r]
-toRowVec n p = fmap (coeff $ p) [0..n]
+import Data.Proxy
 
 fill :: Ring r => Integer -> Integer -> Polynomial r -> Matrix r
-fill q n p = fromLists
-  $ fmap 
-    ( \i -> toRowVec (n - 1) $ xnmodf (i * q) p )
-    [1..(fromIntegral n)]
-
-form :: Ring r => Integer -> Integer -> Polynomial r -> Matrix r
-form q n p = (fill q n p - identity (fromIntegral n))
-  <|> identity (fromIntegral n)
-
-formauto :: KnownNat p => Polynomial (PrimeField p) -> Matrix (PrimeField p)
-formauto p = form (fieldOrder p) (degree p) p
+fill q n p = fromLists $ fmap ( \i -> torowvector (n - 1) $ (monomial 1 $ i * q) % p ) [1..(fromIntegral n)]
+  where
+    torowvector n_ p_ = fmap (flip coeff p_) [0..n_]
 
 unfill :: Ring r => [[r]] -> [Polynomial r]
 unfill = 
   fmap ( \lst ->
     simplify
     $ foldr (+) 0
-    $ zipWith Monomial lst [0 ..]
+    $ zipWith monomial lst [0 ..]
   )
 
--- DATA MATRIX CAN'T REDUCE SOME NON-INVERTABLE MATRICES.
+formmatrix :: forall p. KnownNat p => Polynomial (PrimeField p) -> Matrix (PrimeField p)
+formmatrix p_ = form (natVal (Proxy :: Proxy p)) (degree p_) p_
+  where
+    form q n p = (fill (fromIntegral q) n p - identity (fromIntegral n)) 
+      <|> identity (fromIntegral n)
+
+-- DATA.MATRIX CAN'T REDUCE SOME NON-INVERTABLE MATRICES. >:(
 nullspaceBasis :: KnownNat p => Matrix (PrimeField p) -> [ Polynomial (PrimeField p) ]
 nullspaceBasis m = 
   unfill
@@ -52,8 +42,8 @@ nullspaceBasis m =
   $ rref m
 
 
-berlekampGcds :: KnownNat p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-berlekampGcds f g = fmap ( \i -> ( gcd_ f (g - (fromIntegral i)) ) ) [0..(fieldOrder f)]
+berlekampGcds :: forall p. KnownNat p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
+berlekampGcds f g = fmap ( \i -> ( gcd_ f (g - (fromIntegral i)) ) ) [0..(fromIntegral $ natVal (Proxy :: Proxy p) :: Integer)]
 
 removeReducible :: KnownNat p => [ Polynomial (PrimeField p) ] -> [ Polynomial (PrimeField p) ]
 removeReducible lst = List.filter ( \p -> (==) Nothing $ List.find (\p2 -> (p2 /= p) && (isZero $ p % p2) && (not . isUnit $ p2 // p)) lst ) lst
@@ -63,7 +53,7 @@ findPartners p f = (:) f $ fmap (\n -> p // (f ^ n)) [1..(degree p - degree f)]
 
 possibleFactors :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 possibleFactors p =
-  List.filter (\p -> not $ isUnit p || isZero p)
+  List.filter (\p_ -> not $ isUnit p_ || isZero p_)
   $ List.nub
   $ fmap simplify
   $ List.filter (isZero . (%) p)
@@ -73,7 +63,7 @@ possibleFactors p =
   $ List.concatMap (berlekampGcds p)
   -- $ fmap coerceMonic
   $ nullspaceBasis 
-  $ formauto p
+  $ formmatrix p
 
 sqfrFactors :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 sqfrFactors p = 
@@ -87,7 +77,7 @@ sqfrFactors p =
 berlekamp :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 berlekamp = 
   List.nub
-  . (fmap $ simplify . coerceMonic)
+  . (fmap $ simplify . snd . coercemonic)
   . removeReducible
   . possibleFactors
   . squareFree

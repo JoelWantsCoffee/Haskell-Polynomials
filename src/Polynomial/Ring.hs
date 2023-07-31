@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module Ring where
+module Polynomial.Ring where
 
 import Data.FiniteField.PrimeField
 import GHC.TypeNats
@@ -17,7 +17,7 @@ class Factorable a where
     factor :: a -> [a]
 
 instance KnownNat p => Ring (PrimeField p) where
-    (%) a b = 0
+    (%) _ _ = 0
     (//) a b = a / b
     gcd_ a b
         | a > b = a
@@ -27,7 +27,7 @@ instance KnownNat p => Ring (PrimeField p) where
     isZero = (==) 0
 
 instance Ring Rational where
-    (%) a b = 0
+    (%) _ _ = 0
     (//) a b = a / b
     div_ a b = (a / b, 0)
     gcd_ a b 

@@ -1,4 +1,4 @@
-module CustomMatrix where
+module Polynomial.CustomMatrix where
 
 import Data.List
 
@@ -12,13 +12,14 @@ scaleRow s xs = map (/s) xs
 zeroOut :: (Fractional a, Eq a) => a -> [a] -> [a] -> [a]
 zeroOut _ [] _ = []
 zeroOut factor (x:xs) (y:ys) = (x - factor * y) : zeroOut factor xs ys
+zeroOut _ _ _ = error "matrix : zeroOut function"
 
 findPivot :: (Fractional a, Eq a) => [a] -> Maybe Int
 findPivot = findIndex (/=0)
 
 rowReduction :: (Fractional a, Eq a) => [[a]] -> [[a]]
 rowReduction [] = []
-rowReduction mat = foldr reduceRow mat [0..length mat - 1]
+rowReduction mat_ = foldr reduceRow mat_ [0..length mat_ - 1]
     where
       reduceRow r mat
           | r >= length mat = mat

@@ -1,7 +1,7 @@
-module Squarefree where
+module Polynomial.Squarefree where
 
-import Polynomial
-import Ring
+import Polynomial.Polynomial
+import Polynomial.Ring
 
 -- yun :: Polynomial -> Polynomial
 -- yun p 
@@ -21,9 +21,9 @@ yun2 b d
     | degree b == 0 = b
     | otherwise = let
         a = gcd_ b d
-        (b', _) = b `divide` a
-        (c, _) = d `divide` a
-        d' = c `subtract_` differentiate b'
+        b' = b // a
+        c = d // a
+        d' = c - (differentiate b')
         in
         a * (yun2 b' d')
 
@@ -42,17 +42,17 @@ yun i b d
 
 
 undo :: Ring r => [Factors r] -> Polynomial r
-undo = foldr (\(a, i) b -> pow a i * b) (Monomial 1 0)
+undo = foldr (\(a, i) b -> a^i * b) (monomial 1 0)
 
 forgetPowers :: Ring r => [Factors r] -> Polynomial r
-forgetPowers = foldr (\(a, _) b -> a * b) (Monomial 1 0)
+forgetPowers = foldr (\(a, _) b -> a * b) (monomial 1 0)
 
 sqfr :: Ring r => Polynomial r -> Polynomial r
 sqfr = forgetPowers . decompose
 
 decompose :: Ring r => Polynomial r -> [Factors r]
 decompose f
-    | isConstant f = []
+    | degree f == 0 = []
     | otherwise    = yun 1 b $ (f' // a0) - (differentiate b)
     where
         f' = differentiate f
