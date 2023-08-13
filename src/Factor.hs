@@ -32,20 +32,20 @@ e = (monomial 9 0)
 -- x :: Polynomial Rational
 -- x = (monomial 1 1) * (monomial 3 0)
 -- f :: Polynomial Rational
--- f = simplify $ x * x
+-- f = expand $ x * x
 -- f' :: Polynomial Rational
 -- f' = differentiate f
 
 -- g :: Polynomial Rational
--- g = simplify $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
+-- g = expand $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
 
 gg :: Polynomial Integer
-gg = simplify $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
+gg = expand $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
 
 ggg :: Polynomial (PrimeField 13)
-ggg = simplify $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
+ggg = expand $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
 
--- fac1 = simplify $ (monomial 1 1) + (monomial 5 0) :: Polynomial Integer
+-- fac1 = expand $ (monomial 1 1) + (monomial 5 0) :: Polynomial Integer
 
 -- g' :: Polynomial Rational
 -- g' = differentiate g
@@ -59,13 +59,13 @@ hhh :: Polynomial (PrimeField 13)
 hhh = (+) ((+) (monomial 1 4) (monomial (-1) 2)) ((+) (monomial (-1) 1) (monomial (-1) 0))
 
 -- f = hh
--- out = recombine @(7^3) f $ simplify <$> liftN2 @7 @3 f
--- out = simplify <$> (fmap (fromInteger :: Integer -> PrimeField (7^2))) <$> [g', h']
+-- out = recombine @(7^3) f $ expand <$> liftN2 @7 @3 f
+-- out = expand <$> (fmap (fromInteger :: Integer -> PrimeField (7^2))) <$> [g', h']
 
 
 
-test :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-test = \polynom -> [simplify $ foldr (*) 1 (berlekamp polynom), simplify $ squareFree polynom]
+-- test :: KnownNat p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
+-- test = \polynom -> [expand $ foldr (*) 1 (berlekamp polynom), expand $ squareFree polynom]
 
 x :: Ring r => Polynomial r
 x = monomial 1 1
