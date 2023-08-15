@@ -1,3 +1,5 @@
+-- {-# LANGUAGE TypeFamilies, UndecidableInstances, AllowAmbiguousTypes #-}
+{-# LANGUAGE MonoLocalBinds #-}
 module Polynomial.Berlekamp (berlekamp) where
 
 import Polynomial.Squarefree
@@ -8,7 +10,7 @@ import Polynomial.CustomMatrix
 import Data.Matrix (Matrix, fromLists, toLists, identity, rref, (<|>))
 import Data.Either.Combinators qualified as Either
 import Data.List qualified as List
-import Data.FiniteField.PrimeField
+import Data.FiniteField.PrimeField qualified as PrimeField
 import GHC.TypeNats
 import Data.Proxy
 
@@ -25,14 +27,14 @@ unfill =
     $ zipWith monomial lst [0 ..]
   )
 
-formmatrix :: forall p. Prime p => Polynomial (PrimeField p) -> Matrix (PrimeField p)
-formmatrix p_ = form (natVal (Proxy :: Proxy p)) (degree p_) p_
+formmatrix :: forall p. KnownPrime p => Polynomial (PrimeField p) -> Matrix (PrimeField p)
+formmatrix p_ = form (primeVal (Proxy :: Proxy p)) (degree p_) p_
   where
     form q n p = (fill (fromIntegral q) n p - identity (fromIntegral n)) 
       <|> identity (fromIntegral n)
 
 -- DATA.MATRIX CAN'T REDUCE SOME NON-INVERTABLE MATRICES. >:(
-nullspaceBasis :: Prime p => Matrix (PrimeField p) -> [ Polynomial (PrimeField p) ]
+nullspaceBasis :: KnownPrime p => Matrix (PrimeField p) -> [ Polynomial (PrimeField p) ]
 nullspaceBasis m = 
   unfill
   $ fmap (\lst -> drop (length lst `div` 2 ) lst)
@@ -42,16 +44,16 @@ nullspaceBasis m =
   $ rref m
 
 
-berlekampGcds :: forall p. Prime p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-berlekampGcds f g = fmap ( \i -> ( gcd_ f (g - (fromIntegral i)) ) ) [0..(fromIntegral $ natVal (Proxy :: Proxy p) :: Integer)]
+berlekampGcds :: forall p. KnownPrime p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
+berlekampGcds f g = fmap ( \i -> ( gcd_ f (g - (fromIntegral i)) ) ) [0..(fromIntegral $ primeVal (Proxy :: Proxy p) :: Integer)]
 
-removeReducible :: Prime p => [ Polynomial (PrimeField p) ] -> [ Polynomial (PrimeField p) ]
+removeReducible :: KnownPrime p => [ Polynomial (PrimeField p) ] -> [ Polynomial (PrimeField p) ]
 removeReducible lst = List.filter ( \p -> (==) Nothing $ List.find (\p2 -> (p2 /= p) && (isZero $ p % p2) && (not . isUnit $ p2 // p)) lst ) lst
 
-findPartners :: Prime p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
+findPartners :: KnownPrime p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 findPartners p f = (:) f $ fmap (\n -> p // (f ^ n)) [1..(degree p - degree f)]
 
-possibleFactors :: Prime p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
+possibleFactors :: KnownPrime p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 possibleFactors p =
   List.filter (\p_ -> not $ isUnit p_ || isZero p_)
   $ List.nub
@@ -74,7 +76,7 @@ possibleFactors p =
 --   $ fmap (expand . gcd_ p)
 --   $ possibleFactors p
 
-berlekamp :: Prime p => Polynomial (PrimeField p) -> (Polynomial (PrimeField p), [ Polynomial (PrimeField p) ])
+berlekamp :: KnownPrime p => Polynomial (PrimeField p) -> (Polynomial (PrimeField p), [ Polynomial (PrimeField p) ])
 berlekamp p = 
   (,) lc
   $ List.nub
@@ -84,6 +86,6 @@ berlekamp p =
   where
     lc = (monomial (leadingCoeff p) 0)
 
-instance Prime p => UFD (Polynomial (PrimeField p)) where
+instance (KnownPrime p) => UFD (Polynomial (PrimeField p)) where
   factor_squarefree = berlekamp
   squarefree = squarefree_field

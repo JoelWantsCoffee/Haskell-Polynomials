@@ -7,7 +7,7 @@ import Polynomial.Polynomial
 import Polynomial.Ring
 import Polynomial.Squarefree
 import Polynomial.Hensel
-import Data.FiniteField.PrimeField
+import Data.FiniteField.PrimeField qualified as PF
 import GHC.TypeNats
 
 
@@ -42,7 +42,7 @@ e = (monomial 9 0)
 gg :: Polynomial Integer
 gg = expand $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
 
-ggg :: Polynomial (PrimeField 13)
+ggg :: Polynomial (PrimeField (p :: Prime 13))
 ggg = expand $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (monomial 1 0))
 
 -- fac1 = expand $ (monomial 1 1) + (monomial 5 0) :: Polynomial Integer
@@ -55,7 +55,7 @@ ggg = expand $ (*) ((+) (monomial 1 1) (monomial 1 0)) ((+) (monomial 1 2) (mono
 hh :: Polynomial Integer
 hh = (+) ((+) (monomial 1 4) (monomial (-1) 2)) ((+) (monomial (-1) 1) (monomial (-1) 0))
 
-hhh :: Polynomial (PrimeField 13)
+hhh :: Polynomial (PrimeField (p :: Prime 13))
 hhh = (+) ((+) (monomial 1 4) (monomial (-1) 2)) ((+) (monomial (-1) 1) (monomial (-1) 0))
 
 -- f = hh

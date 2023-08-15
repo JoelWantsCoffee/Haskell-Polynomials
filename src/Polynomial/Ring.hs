@@ -1,12 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
+-- {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Polynomial.Ring where
 
-import Data.FiniteField.PrimeField
+import Data.FiniteField.PrimeField qualified as PF
 import GHC.TypeNats
+import Data.Reflection
 import Data.Proxy
-import Unsafe.Coerce (unsafeCoerce)
 
 class (Num a, Eq a) => Ring a where -- really a GCD Domain
     (//) :: a -> a -> a
@@ -23,29 +30,6 @@ class GCDD a => UFD a where
     squarefree :: a -> a
 
 class UFD a => Field a where
-
-class KnownNat p => Prime p where
-
-instance KnownNat p => Prime p where
-
-instance KnownNat p => Ring (PrimeField p) where
-    (%) _ _ = 0
-    (//) a b = a / b
-    div_ a b = (a / b, 0)
-    isUnit = (/=) 0
-    isZero = (==) 0
-
-instance KnownNat p => GCDD (PrimeField p) where
-    gcd_ a b
-        | a > b = a
-        | otherwise = b
-
-instance KnownNat p => UFD (PrimeField p) where
-    factor_squarefree _ = undefined
-    squarefree _ = undefined
-
-instance Prime p => Field (PrimeField p) where
-
 
 instance Ring Integer where
     (%) = mod
@@ -96,3 +80,53 @@ instance UFD Double where
     squarefree = id
 
 instance Field Double where
+
+
+-- INTEGER QUOTIENT RINGS 
+
+type FiniteCyclicRing (n :: Nat) = PF.PrimeField n
+
+instance KnownNat p => Ring (FiniteCyclicRing p) where
+    (%) _ _ = 0
+    (//) a b = a / b
+    div_ a b = (a / b, 0)
+    isUnit = (/=) 0
+    isZero = (==) 0
+
+instance KnownNat p => GCDD (FiniteCyclicRing p) where
+    gcd_ a b
+        | a > b = a
+        | otherwise = b
+
+instance KnownNat p => UFD (FiniteCyclicRing p) where
+    factor_squarefree _ = undefined
+    squarefree _ = undefined
+
+
+-- PRIME STUFF
+
+
+data Prime (n :: Nat) = MkPrime
+
+type family Pow (p :: Prime n) (k :: Nat) :: Nat where
+    Pow (p :: Prime n) k = n ^ k
+
+newtype PrimeField (p :: Prime n) = PrimeField (FiniteCyclicRing n)
+      deriving (Show, Eq, Ord, Num, Ring, GCDD, UFD, Fractional, Bounded, Enum)
+
+toFiniteCyclicRing :: forall (n :: Nat) (p :: Prime n). PrimeField p -> FiniteCyclicRing n
+toFiniteCyclicRing (PrimeField n) = n
+
+class KnownNat n => KnownPrime (p :: Prime n) where
+    primeVal :: Proxy p -> Natural
+
+instance KnownNat n => KnownPrime (p :: Prime n) where
+    primeVal (_ :: Proxy p) = natVal $ Proxy @n
+
+reifyPrime :: forall r. Integer -> (forall (n :: Nat) (p :: Prime n). KnownPrime p => Proxy p -> r) -> r
+reifyPrime i f = reifyNat i (f . assumePrime)
+
+assumePrime :: forall (n :: Nat) (p :: Prime n) . (KnownNat n, KnownPrime p) => Proxy n -> Proxy p
+assumePrime Proxy = Proxy
+
+instance KnownPrime p => Field (PrimeField p) where

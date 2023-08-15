@@ -7,15 +7,15 @@ import Polynomial.Squarefree
 import Polynomial.Berlekamp()
 
 import Data.Proxy
-import Data.FiniteField.PrimeField as PrimeField
+import Data.FiniteField.PrimeField qualified as PrimeField
 import GHC.TypeNats
 import Data.Reflection
 import Data.List qualified as List
 import qualified Data.Ratio as Ratio
 import Combinatorics qualified as Combinatorics
 
--- x,y returns (a,b,c) such that ax + by = c = gcd(x,y)
-extendedGcd :: GCDD r => r -> r -> (r,r,r)
+-- x,y returns (c,a,b) such that ax + by = c = gcd(x,y)
+extendedGcd :: GCDD r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r, Polynomial r)
 extendedGcd a b | isZero b  = (a, 1, 0)
                 | otherwise = 
                     let (q, r) = div_ a b
@@ -47,16 +47,16 @@ lift2 :: forall (pk1 :: Nat). KnownNat pk1
 lift2 f lu (a,b) (g,h) = ( toIntegerNormal <$> (fromInteger <$> g) + beta*d, PrimeField.toInteger <$> (fromInteger <$> h) + beta*c )
     where
         -- beta = ( 1 - gamma ) // alpha
-        beta :: Polynomial (PrimeField pk1)
+        beta :: Polynomial (FiniteCyclicRing pk1)
         beta = 1 // (fromInteger <$> lu)
 
-        delta :: Polynomial (PrimeField pk1)
+        delta :: Polynomial (FiniteCyclicRing pk1)
         delta = expand $ fromInteger <$> f - lu * g * h
 
-        c :: Polynomial (PrimeField pk1)
+        c :: Polynomial (FiniteCyclicRing pk1)
         c = fromInteger <$> (a * (toIntegerNormal <$> delta)) % h
 
-        d :: Polynomial (PrimeField pk1)
+        d :: Polynomial (FiniteCyclicRing pk1)
         d = fromInteger <$> (b * (toIntegerNormal <$> delta)) % g
 
 
@@ -66,33 +66,33 @@ do_lift2 :: (Natural, Natural)
     -> (Polynomial Integer, Polynomial Integer)
     -> (Polynomial Integer, Polynomial Integer)
 do_lift2 (p,k) f lf (g,h) = 
-    reifyNat (fromIntegral p) 
+    reifyPrime (fromIntegral p)
         (  \(_ :: Proxy p) -> 
-            let (r, a, b) = extendedGcd @(Polynomial (PrimeField p)) (fromInteger <$> g) (fromInteger <$> h)
+            let (r, a, b) = extendedGcd @(PrimeField p) (fromInteger <$> g) (fromInteger <$> h)
             in reifyNat 
                 ( fromIntegral (p^(k+1)) )
                 ( \(_ :: Proxy pk1) -> 
-                    lift2 @pk1 f lf (toIntegerNormal <$> a // r, toIntegerNormal <$> b // r) (g,h) 
+                    lift2 @pk1 f lf (toIntegerNormal' <$> a // r, toIntegerNormal' <$> b // r) (g,h) 
                 )
         )
 
 
-lift_to :: forall (p :: Nat) (k :: Nat) . (KnownNat p, KnownNat k, KnownNat (p^k))
+lift_to :: forall (n :: Nat) (k :: Nat) (p :: Prime n). (KnownPrime p, KnownNat k, KnownNat (Pow p k))
     => Polynomial Integer
-    -> (Polynomial Integer, [Polynomial (PrimeField (p^k))])
+    -> (Polynomial Integer, [Polynomial (FiniteCyclicRing (Pow p k))])
 lift_to poly = (,) lu $ (fmap fromInteger . snd . lift_) <$> (split [] basefact)
     where
         (lu, basefact) = factorInField p poly
 
         lift_ :: (Polynomial Integer, Polynomial Integer) -> (Polynomial Integer, Polynomial Integer)
-        lift_ = foldr (.) id ((\k_ -> do_lift2 (natVal (Proxy :: Proxy p), k_) poly lu ) <$> (List.reverse [1..(k - 1)]))
+        lift_ = foldr (.) id ((\k_ -> do_lift2 (p, k_) poly lu ) <$> (List.reverse [1..(k - 1)]))
         
         split :: Ring r => [(Polynomial r)] -> [(Polynomial r)] -> [(Polynomial r, Polynomial r)]
         split prev (h:t) = (foldr (*) 1 (prev ++ t), h) : (split (h:prev) t)
         split _ [] = []
         
         k = natVal $ (Proxy :: Proxy k)
-        p = natVal $ (Proxy :: Proxy p)
+        p = primeVal $ (Proxy :: Proxy p)
 
 
 {- hensel's lemma
@@ -176,20 +176,26 @@ factorize_linear p = recombine p $ liftN @13 @6 p
 -}
 
 -- cast ( PrimeField p ) -> [ -p/2, p )
-toIntegerNormal :: forall (p :: Nat). KnownNat p => PrimeField p -> Integer
+toIntegerNormal :: forall (n :: Nat). KnownNat n => FiniteCyclicRing n -> Integer
 toIntegerNormal c_ = if c < ( p `div` 2) then c else c - p
     where
         c = (PrimeField.toInteger c_) `mod` p
-        p = fromIntegral $ natVal (Proxy :: Proxy p)
+        p = fromIntegral $ natVal (Proxy :: Proxy n)
+
+toIntegerNormal' :: forall (n :: Nat) (p :: Prime n). KnownPrime p => PrimeField p -> Integer
+toIntegerNormal' c_ = if c < ( p `div` 2) then c else c - p
+    where
+        c = (PrimeField.toInteger $ toFiniteCyclicRing c_) `mod` p
+        p = fromIntegral $ primeVal (Proxy :: Proxy p)
 
 -- The-art-of-computer-programming.-Vol.2.-Seminumerical-algorithms-by-Knuth-Donald PAGE 452 F2
 recombine :: forall (m :: Nat). KnownNat m 
     => Polynomial Integer 
-    -> (Polynomial Integer, [Polynomial (PrimeField m)])
+    -> (Polynomial Integer, [Polynomial (FiniteCyclicRing m)])
     -> [Polynomial Integer]
 recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
     where
-        recombine_ :: Integer -> Polynomial Integer -> [Polynomial (PrimeField m)] -> [Polynomial Integer]
+        recombine_ :: Integer -> Polynomial Integer -> [Polynomial (FiniteCyclicRing m)] -> [Polynomial Integer]
         recombine_ d u polys = if d > r then [] else (pure_part <$> out) ++ recombine_ (d + 1) u remaining
             where
                 remaining = polys List.\\ (List.concat remove)
@@ -204,18 +210,17 @@ recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
 
 
 
-hasMultipleRoots :: KnownNat p => Polynomial (PrimeField p) -> Bool
+hasMultipleRoots :: GCDD r => Polynomial r -> Bool
 hasMultipleRoots p = (/=) (1) (expand $ gcd_ p (differentiate p))
 
 factorInField :: Natural -> Polynomial Integer -> (Polynomial Integer, [ Polynomial Integer ])
-factorInField n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p
+factorInField n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal' . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p
     where
         lc = leadingCoeff p
 
-funcInField :: (forall (p :: Nat). Prime p => Polynomial (PrimeField p) -> r) -> Natural -> Polynomial Integer -> r
+funcInField :: (forall (n :: Nat) (p :: Prime n). KnownPrime p => Polynomial (PrimeField p) -> r) -> Natural -> Polynomial Integer -> r
 funcInField func n poly = 
-    reifyNat (fromIntegral n) $ (\(_ :: Proxy p) -> ( func $ fmap (fromInteger @(PrimeField p)) poly ))
-
+    reifyPrime (fromIntegral n) $ (\(_ :: Proxy p) -> ( func $ fmap (fromInteger @(PrimeField p)) poly ))
 
 instance UFD (Polynomial Integer) where
     -- factor p (mod 13), then lift to factors to (mod 13^6), then recombine
