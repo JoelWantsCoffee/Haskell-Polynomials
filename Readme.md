@@ -10,11 +10,10 @@ run `nix-shell`
 
 ## Usage
 
-Use the `Factorable` typeclass to factor polynomials.
+Use the `factor` function with type applicaiton to factor polynomials.
 
 ```haskell
-class Factorable a where
-    factor :: a -> [a]
+factor @Integer (x^3 + x^2 + x + 1)
 ```
 
-Currently, `Polynomial (PrimeField p)` is the only instance.
+Currently, `Polynomial (PrimeField p)`, `Polynomial Integer`, and `Polynomial Rational` should work.
