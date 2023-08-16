@@ -6,8 +6,6 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
--- {-# LANGUAGE AllowAmbiguousTypes #-}
-
 module Polynomial.Ring where
 
 import Data.FiniteField.PrimeField qualified as PF
@@ -15,7 +13,7 @@ import GHC.TypeNats
 import Data.Reflection
 import Data.Proxy
 
-class (Num a, Eq a) => Ring a where -- really a GCD Domain
+class (Num a, Eq a) => Ring a where
     (//) :: a -> a -> a
     (%)  :: a -> a -> a
     div_ :: a -> a -> (a,a)

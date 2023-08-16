@@ -1,6 +1,5 @@
 module Polynomial.Squarefree 
     ( squarefree_field
-    , pure_part
     , factor
     , decompose
     ) where
@@ -58,7 +57,4 @@ factor p = Factoring
         recover_power base (fact, power) = if isZero remainder then recover_power quotient (fact, power + 1) else (base, (fact, power))
             where (quotient, remainder) = base `div_` fact
 
-        (_, factors) = factor_squarefree $ pure_part $ squarefree p
-
-pure_part :: GCDD r => Polynomial r -> Polynomial r
-pure_part p = (//) p $ flip monomial 0 . foldr1 gcd_ . fmap fst . toList $ p
+        (_, factors) = factor_squarefree $ snd . purePart $ squarefree p

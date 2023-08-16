@@ -12,6 +12,7 @@ module Polynomial.Polynomial
     , leadingCoeff
     , leadingTerm
     , monomial
+    , purePart
     , coeff
     ) where
 
@@ -56,7 +57,14 @@ instance Ring r => Ring (Polynomial r) where
             isZero_ (Product a b) = (isZero_ a) || (isZero_ b)
 
 instance GCDD r => GCDD (Polynomial r) where
-    gcd_ = gcdPoly
+    gcd_ :: GCDD r => Polynomial r -> Polynomial r -> Polynomial r
+    gcd_ f g    | isZero f = g
+                | isZero g = f
+                | degree g < 1 = 1
+                | otherwise = let
+                        ((fc, f_), (gc, g_)) = (purePart f, purePart g)
+                        (q,r) = f_ `div_` g_
+                    in (monomial (gcd_ fc gc) 0) * (gcd_ g_ r)
 
 instance (Show r, Ring r) => Show (Polynomial r) where
     show :: Polynomial r -> String
@@ -244,3 +252,11 @@ coercemonic p = if isUnit lc then (lc, (monomial lcinv 0) * p) else (1, p)
 
 monomial :: r -> Degree -> Polynomial r
 monomial = Monomial
+
+purePart :: GCDD r => Polynomial r -> (r, Polynomial r)
+purePart p = (c, p // (monomial c 0))
+    where
+        c = foldr1 gcd_ . fmap fst . toList $ p
+
+-- pure_part :: GCDD r => Polynomial r -> Polynomial r
+-- pure_part p = (//) p $ flip monomial 0 . foldr1 gcd_ . fmap fst . toList $ p

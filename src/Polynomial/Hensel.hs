@@ -15,12 +15,22 @@ import qualified Data.Ratio as Ratio
 import Combinatorics qualified as Combinatorics
 
 -- x,y returns (c,a,b) such that ax + by = c = gcd(x,y)
-extendedGcd :: GCDD r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r, Polynomial r)
+extendedGcd :: GCDD r => r -> r -> (r, r, r)
 extendedGcd a b | isZero b  = (a, 1, 0)
                 | otherwise = 
                     let (q, r) = div_ a b
                         (d, x, y) = extendedGcd b r
-                    in (d, y, x - (q // y))
+                    in (d, y, x - q * y)
+
+{-
+    7 5
+        5 2
+            2 1
+                1 0
+                (1, 1, 0)
+
+
+-}
 
 {-
 
@@ -68,7 +78,7 @@ do_lift2 :: (Natural, Natural)
 do_lift2 (p,k) f lf (g,h) = 
     reifyPrime (fromIntegral p)
         (  \(_ :: Proxy p) -> 
-            let (r, a, b) = extendedGcd @(PrimeField p) (fromInteger <$> g) (fromInteger <$> h)
+            let (r, a, b) = extendedGcd @(Polynomial (PrimeField p)) (fromInteger <$> g) (fromInteger <$> h)
             in reifyNat 
                 ( fromIntegral (p^(k+1)) )
                 ( \(_ :: Proxy pk1) -> 
@@ -196,7 +206,7 @@ recombine :: forall (m :: Nat). KnownNat m
 recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
     where
         recombine_ :: Integer -> Polynomial Integer -> [Polynomial (FiniteCyclicRing m)] -> [Polynomial Integer]
-        recombine_ d u polys = if d > r then [] else (pure_part <$> out) ++ recombine_ (d + 1) u remaining
+        recombine_ d u polys = if d > r then [] else ((snd . purePart) <$> out) ++ recombine_ (d + 1) u remaining
             where
                 remaining = polys List.\\ (List.concat remove)
                 (remove, out) = unzip $ List.filter ( \(_, p) -> isZero $ (lu * u) % p ) vbars
