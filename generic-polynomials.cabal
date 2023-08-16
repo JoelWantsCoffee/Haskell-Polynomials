@@ -67,14 +67,13 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Factor
+    exposed-modules: Polynomial.Factor, Polynomial.Polynomial
 
     -- Modules included in this library but not exported.
     other-modules:
         Polynomial.Berlekamp,
         Polynomial.CustomMatrix,
         Polynomial.Hensel,
-        Polynomial.Polynomial,
         Polynomial.Ring,
         Polynomial.Squarefree
 
@@ -145,4 +144,6 @@ test-suite generic-polynomials-test
     -- Test dependencies.
     build-depends:
         base ^>=4.16.4.0,
+        tasty, 
+        tasty-hunit,
         generic-polynomials

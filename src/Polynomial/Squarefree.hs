@@ -1,7 +1,9 @@
 module Polynomial.Squarefree 
     ( squarefree_field
     , factor
+    , unfactor
     , decompose
+    , listify
     ) where
     
 
@@ -47,10 +49,16 @@ instance Show a => Show (Factoring a) where
             \(p, n) -> if (n == 1) then "(" ++ (show p) ++ ")" else "(" ++ (show p) ++ ")^" ++ (show n)
         ) <$> lst)
 
+unfactor :: Ring r => Factoring r -> r
+unfactor (Factoring (r,lst)) = (*) r $ foldl (*) 1 ((\(p, e) -> p ^ e) <$> lst)
+
+listify :: Ring r => Factoring (Polynomial r) -> [(Polynomial r)]
+listify (Factoring (_, lst)) = (expand . fst) <$> lst
+
 factor :: (GCDD r, UFD (Polynomial r)) => Polynomial r -> Factoring (Polynomial r)
 factor p = Factoring 
-    $ (\(u,lst) -> (u, List.reverse $ List.sort lst))   
-    $ foldr (\fact (rest, lst) -> (\(r,l) -> (expand r, l:lst)) 
+    $ (\(u,lst) -> (u, List.reverse $ List.sort $ List.filter ((<) 0 . snd) lst))
+    $ foldr (\fact (rest, lst) -> (\(r,l) -> (expand r, l:lst))
     $ recover_power rest (fact, 0)) (p, []) factors
     where
         recover_power :: Ring r => Polynomial r -> (Polynomial r, Natural) -> (Polynomial r, (Polynomial r, Natural))

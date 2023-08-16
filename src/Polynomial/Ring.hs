@@ -5,15 +5,30 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
-module Polynomial.Ring where
+module Polynomial.Ring 
+    ( Ring(..)
+    , GCDD(..)
+    , UFD(..)
+    , Field(..)
+    , Prime
+    , Pow
+    , PrimeField
+    , FiniteCyclicRing
+    , KnownPrime
+    , AssumePrime
+    , reifyPrime
+    , primeVal
+    , toFiniteCyclicRing
+    ) where
 
 import Data.FiniteField.PrimeField qualified as PF
 import GHC.TypeNats
 import Data.Reflection
 import Data.Proxy
 
-class (Num a, Eq a) => Ring a where
+class (Num a, Ord a, Eq a) => Ring a where
     (//) :: a -> a -> a
     (%)  :: a -> a -> a
     div_ :: a -> a -> (a,a)
@@ -104,13 +119,18 @@ instance KnownNat p => UFD (FiniteCyclicRing p) where
 -- PRIME STUFF
 
 
-data Prime (n :: Nat) = MkPrime
+data Prime (n :: Nat)
+
+type family AssumePrime (n :: Nat) :: Prime n
 
 type family Pow (p :: Prime n) (k :: Nat) :: Nat where
     Pow (p :: Prime n) k = n ^ k
 
 newtype PrimeField (p :: Prime n) = PrimeField (FiniteCyclicRing n)
-      deriving (Show, Eq, Ord, Num, Ring, GCDD, UFD, Fractional, Bounded, Enum)
+      deriving (Eq, Ord, Num, Ring, GCDD, UFD, Fractional, Bounded, Enum)
+
+instance KnownPrime p => Show (PrimeField p) where
+    show (PrimeField e) = show e
 
 toFiniteCyclicRing :: forall (n :: Nat) (p :: Prime n). PrimeField p -> FiniteCyclicRing n
 toFiniteCyclicRing (PrimeField n) = n

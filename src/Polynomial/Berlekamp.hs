@@ -48,7 +48,18 @@ berlekampGcds :: forall p. KnownPrime p => Polynomial (PrimeField p) -> Polynomi
 berlekampGcds f g = fmap ( \i -> ( gcd_ f (g - (fromIntegral i)) ) ) [0..(fromIntegral $ primeVal (Proxy :: Proxy p) :: Integer)]
 
 removeReducible :: KnownPrime p => [ Polynomial (PrimeField p) ] -> [ Polynomial (PrimeField p) ]
-removeReducible lst = List.filter ( \p -> (==) Nothing $ List.find (\p2 -> (p2 /= p) && (isZero $ p % p2) && (not . isUnit $ p2 // p)) lst ) lst
+removeReducible = removeReducible_ []
+  where
+    removeReducible_ prev (h:t) = removeReducible_ ((reduce (prev ++ t) h) : prev) t
+    removeReducible_ out [] = out
+
+    reduce :: KnownPrime p => [ Polynomial (PrimeField p) ] -> Polynomial (PrimeField p) -> Polynomial (PrimeField p)
+    reduce [] p = p
+    reduce (h:t) p  | (h == p) = reduce t p
+                    | (isZero $ p % h) && (not . isUnit $ h // p) = reduce (h:t) (p // h)
+                    | otherwise = reduce t p
+
+-- removeReducible lst = List.filter ( \p -> (==) Nothing $ List.find (\p2 -> (p2 /= p) && (isZero $ p % p2) && (not . isUnit $ p2 // p)) lst ) lst
 
 findPartners :: KnownPrime p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 findPartners p f = (:) f $ fmap (\n -> p // (f ^ n)) [1..(degree p - degree f)]
@@ -82,6 +93,8 @@ berlekamp p =
   $ List.nub
   $ (fmap $ expand . snd . coercemonic)
   $ removeReducible
+  $ List.nub
+  $ (fmap $ expand . snd . purePart)
   $ possibleFactors (p // lc)
   where
     lc = (monomial (leadingCoeff p) 0)

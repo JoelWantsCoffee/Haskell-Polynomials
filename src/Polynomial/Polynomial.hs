@@ -26,8 +26,10 @@ data Polynomial r
             | Sum (Polynomial r) (Polynomial r)  
             | Product (Polynomial r) (Polynomial r)
 
-instance Ring r => Ord (Polynomial r) where
-    compare p1 p2 = compare (degree p1) (degree p2)
+instance (Ord r, Ring r) => Ord (Polynomial r) where
+    compare p1 p2 = if (degree p1) == (degree p2)
+        then compare (toList p1) (toList p2)
+        else compare (degree p1) (degree p2)
 
 instance Ring (Polynomial r) => Eq (Polynomial r) where
     (==) x y = isZero (x - y)
@@ -63,8 +65,7 @@ instance GCDD r => GCDD (Polynomial r) where
                 | degree g < 1 = 1
                 | otherwise = let
                         ((fc, f_), (gc, g_)) = (purePart f, purePart g)
-                        (q,r) = f_ `div_` g_
-                    in (monomial (gcd_ fc gc) 0) * (gcd_ g_ r)
+                    in (monomial (gcd_ fc gc) 0) * (gcd_ g_ (f_ % g_))
 
 instance (Show r, Ring r) => Show (Polynomial r) where
     show :: Polynomial r -> String
@@ -137,6 +138,7 @@ toList = toList_ . expand
     where
         toList_ (Sum a b) = (toList_ a) ++ (toList_ b)
         toList_ (Monomial c d) = [(c,d)]
+        toList_ _ = undefined
 
 
 divide :: Ring r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
@@ -149,21 +151,7 @@ divide a b | degree a < degree b = (0, a)
                          in if isZero q 
                             then (0, r)
                             else case divide r (expand b) of
-                             (q', r') -> (q + q', r')
-
-
--- gcd
-gcdPoly :: GCDD r => Polynomial r -> Polynomial r -> Polynomial r
-gcdPoly f g
-    | isZero (expand g) = f
-    | isZero (f // ng) = 1
-    | otherwise = gcdPoly ng (f % ng)
-    where
-        ng = fmap (\x_ -> x_ // gcdAll (expand g)) (expand g)
-        gcdAll :: GCDD r => Polynomial r -> r
-        gcdAll (Monomial c _) = c
-        gcdAll (Sum a b) = gcd_ (gcdAll a) (gcdAll b)
-        gcdAll a = gcdAll $ ungroup a         
+                             (q', r') -> (q + q', r') 
 
 
 -- differentiate

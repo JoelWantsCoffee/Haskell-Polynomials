@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds, AllowAmbiguousTypes, ScopedTypeVariables, TypeFamilies #-}
-module Polynomial.Hensel where
+module Polynomial.Hensel () where
 
 import Polynomial.Ring
 import Polynomial.Polynomial
@@ -224,7 +224,7 @@ hasMultipleRoots :: GCDD r => Polynomial r -> Bool
 hasMultipleRoots p = (/=) (1) (expand $ gcd_ p (differentiate p))
 
 factorInField :: Natural -> Polynomial Integer -> (Polynomial Integer, [ Polynomial Integer ])
-factorInField n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal' . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p
+factorInField n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal' . snd . coercemonic . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p
     where
         lc = leadingCoeff p
 
@@ -235,7 +235,7 @@ funcInField func n poly =
 instance UFD (Polynomial Integer) where
     -- factor p (mod 13), then lift to factors to (mod 13^6), then recombine
     factor_squarefree :: Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
-    factor_squarefree p = (1, recombine p $ lift_to @13 @6 p)
+    factor_squarefree p = (1, recombine p $ lift_to @97 @5 p)
 
     squarefree :: Polynomial Integer -> Polynomial Integer
     squarefree = fmap Ratio.numerator . squarefree_field . fmap (fromInteger :: Integer -> Rational)
@@ -244,7 +244,7 @@ instance UFD (Polynomial Integer) where
 instance UFD (Polynomial Rational) where
     factor_squarefree :: Polynomial Rational -> (Polynomial Rational, [Polynomial Rational])
     factor_squarefree p = 
-        (\(u_, lst) -> (expand $ (monomial (1/u) 0) * (fromInteger <$> u_), (fmap fromInteger) <$> lst))
+        (\(u_, lst) -> (expand $ (monomial (1/u) 0) * (fromInteger <$> u_), snd . coercemonic . (fmap fromInteger) <$> lst))
         $ factor_squarefree @(Polynomial Integer)
         $ fmap Ratio.numerator
         $ expand 
