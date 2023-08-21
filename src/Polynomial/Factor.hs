@@ -4,6 +4,7 @@ module Polynomial.Factor
     ( Ring(..)
     , GCDD(..)
     , UFD(..)
+    , ED(..)
     , Field(..)
     , Prime
     , KnownPrime

@@ -14,7 +14,7 @@ import Data.FiniteField.PrimeField qualified as PrimeField
 import GHC.TypeNats
 import Data.Proxy
 
-fill :: Ring r => Integer -> Integer -> Polynomial r -> Matrix r
+fill :: KnownPrime p => Integer -> Integer -> Polynomial (PrimeField p) -> Matrix (PrimeField p)
 fill q n p = fromLists $ fmap ( \i -> torowvector (n - 1) $ (monomial 1 $ i * q) % p ) [1..(fromIntegral n)]
   where
     torowvector n_ p_ = fmap (flip coeff p_) [0..n_]

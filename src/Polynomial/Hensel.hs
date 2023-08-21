@@ -15,7 +15,7 @@ import qualified Data.Ratio as Ratio
 import Combinatorics qualified as Combinatorics
 
 -- x,y returns (c,a,b) such that ax + by = c = gcd(x,y)
-extendedGcd :: GCDD r => r -> r -> (r, r, r)
+extendedGcd :: ED r => r -> r -> (r, r, r)
 extendedGcd a b | isZero b  = (a, 1, 0)
                 | otherwise = 
                     let (q, r) = div_ a b
@@ -54,20 +54,20 @@ lift2 :: forall (pk1 :: Nat). KnownNat pk1
     -> (Polynomial Integer, Polynomial Integer)
     -> (Polynomial Integer, Polynomial Integer)
     -> (Polynomial Integer, Polynomial Integer)
-lift2 f lu (a,b) (g,h) = ( toIntegerNormal <$> (fromInteger <$> g) + beta*d, PrimeField.toInteger <$> (fromInteger <$> h) + beta*c )
+lift2 f lu (a,b) (g,h) = ( expand $ toIntegerNormal <$> (fromInteger <$> g) + beta*d, expand $ PrimeField.toInteger <$> (fromInteger <$> h) + beta*c )
     where
         -- beta = ( 1 - gamma ) // alpha
         beta :: Polynomial (FiniteCyclicRing pk1)
-        beta = 1 // (fromInteger <$> lu)
+        beta =  monomial (1 // (fromInteger $ leadingCoeff lu)) 0
 
         delta :: Polynomial (FiniteCyclicRing pk1)
         delta = expand $ fromInteger <$> f - lu * g * h
 
         c :: Polynomial (FiniteCyclicRing pk1)
-        c = fromInteger <$> (a * (toIntegerNormal <$> delta)) % h
+        c = (<$>) fromInteger . expand . snd $ polyDivMod (a * (toIntegerNormal <$> delta)) h
 
         d :: Polynomial (FiniteCyclicRing pk1)
-        d = fromInteger <$> (b * (toIntegerNormal <$> delta)) % g
+        d = (<$>) fromInteger . expand . snd $ polyDivMod (b * (toIntegerNormal <$> delta)) g
 
 
 do_lift2 :: (Natural, Natural)
@@ -98,7 +98,7 @@ lift_to poly = (,) lu $ (fmap fromInteger . snd . lift_) <$> (split [] basefact)
         lift_ = foldr (.) id ((\k_ -> do_lift2 (p, k_) poly lu ) <$> (List.reverse [1..(k - 1)]))
         
         split :: Ring r => [(Polynomial r)] -> [(Polynomial r)] -> [(Polynomial r, Polynomial r)]
-        split prev (h:t) = (foldr (*) 1 (prev ++ t), h) : (split (h:prev) t)
+        split prev (h:t) = (expand $ foldr (*) 1 (prev ++ t), h) : (split (h:prev) t)
         split _ [] = []
         
         k = natVal $ (Proxy :: Proxy k)
@@ -209,7 +209,7 @@ recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
         recombine_ d u polys = if d > r then [] else ((snd . purePart) <$> out) ++ recombine_ (d + 1) u remaining
             where
                 remaining = polys List.\\ (List.concat remove)
-                (remove, out) = unzip $ List.filter ( \(_, p) -> isZero $ (lu * u) % p ) vbars
+                (remove, out) = unzip $ List.filter ( \(_, p) -> isZero . snd $ polyDivMod (lu * u) p ) vbars
                 vbars = (\lst_ -> (lst_, fmap toIntegerNormal $ expand $ (*) (fromInteger <$> lu) $ foldr1 (*) lst_)) <$> choices
                 choices = Combinatorics.tuples (fromInteger d) polys
                 r :: Integer
@@ -220,8 +220,8 @@ recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
 
 
 
-hasMultipleRoots :: GCDD r => Polynomial r -> Bool
-hasMultipleRoots p = (/=) (1) (expand $ gcd_ p (differentiate p))
+-- hasMultipleRoots :: ED r => Polynomial r -> Bool
+-- hasMultipleRoots p = (/=) (1) (expand $ gcd_ p (differentiate p))
 
 factorInField :: Natural -> Polynomial Integer -> (Polynomial Integer, [ Polynomial Integer ])
 factorInField n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal' . snd . coercemonic . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p

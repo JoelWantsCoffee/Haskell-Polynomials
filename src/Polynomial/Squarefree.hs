@@ -55,14 +55,13 @@ unfactor (Factoring (r,lst)) = (*) r $ foldl (*) 1 ((\(p, e) -> p ^ e) <$> lst)
 listify :: Ring r => Factoring (Polynomial r) -> [(Polynomial r)]
 listify (Factoring (_, lst)) = (expand . fst) <$> lst
 
-factor :: (GCDD r, UFD (Polynomial r)) => Polynomial r -> Factoring (Polynomial r)
+factor :: (ED r, UFD (Polynomial r)) => Polynomial r -> Factoring (Polynomial r)
 factor p = Factoring 
     $ (\(u,lst) -> (u, List.reverse $ List.sort $ List.filter ((<) 0 . snd) lst))
     $ foldr (\fact (rest, lst) -> (\(r,l) -> (expand r, l:lst))
     $ recover_power rest (fact, 0)) (p, []) factors
     where
-        recover_power :: Ring r => Polynomial r -> (Polynomial r, Natural) -> (Polynomial r, (Polynomial r, Natural))
-        recover_power base (fact, power) = if isZero remainder then recover_power quotient (fact, power + 1) else (base, (fact, power))
-            where (quotient, remainder) = base `div_` fact
+        recover_power :: ED r => Polynomial r -> (Polynomial r, Natural) -> (Polynomial r, (Polynomial r, Natural))
+        recover_power base (fact, power) = if (isZero . snd $ polyDivMod base fact) then recover_power (base /. fact) (fact, power + 1) else (base, (fact, power))
 
         (_, factors) = factor_squarefree $ snd . purePart $ squarefree p

@@ -11,6 +11,7 @@ module Polynomial.Polynomial
     , fromList
     , leadingCoeff
     , leadingTerm
+    , polyDivMod
     , monomial
     , purePart
     , coeff
@@ -48,9 +49,7 @@ instance Functor Polynomial where
     fmap f (Product a b) = Product (fmap f a) (fmap f b)
 
 instance Ring r => Ring (Polynomial r) where
-    (%) a = expand . snd . divide a
-    (//) a = expand . fst . divide a
-    div_ = divide
+    (/.) a = expand . divide a
     isUnit p = (degree p == 0) && (isUnit $ leadingCoeff p)
     isZero p = isZero_ $ expand p
         where
@@ -58,14 +57,21 @@ instance Ring r => Ring (Polynomial r) where
             isZero_ (Monomial a _) = isZero a
             isZero_ (Product a b) = (isZero_ a) || (isZero_ b)
 
-instance GCDD r => GCDD (Polynomial r) where
-    gcd_ :: GCDD r => Polynomial r -> Polynomial r -> Polynomial r
+instance Field r => ED (Polynomial r) where
+    (//) a = expand . fst . polyDivMod a
+    (%) a = expand . snd . polyDivMod a
+    div_ = polyDivMod
+    euclidean = degree
+
+instance ED r => GCDD (Polynomial r) where
+    gcd_ :: ED r => Polynomial r -> Polynomial r -> Polynomial r
     gcd_ f g    | isZero f = g
                 | isZero g = f
                 | degree g < 1 = 1
                 | otherwise = let
-                        ((fc, f_), (gc, g_)) = (purePart f, purePart g)
-                    in (monomial (gcd_ fc gc) 0) * (gcd_ g_ (f_ % g_))
+                        (fc, f_) = purePart f
+                        (gc, g_) = purePart g
+                    in (monomial (gcd_ fc gc) 0) * (gcd_ g_ (snd $ polyDivMod f_ g_))
 
 instance (Show r, Ring r) => Show (Polynomial r) where
     show :: Polynomial r -> String
@@ -82,22 +88,48 @@ instance (Show r, Ring r) => Show (Polynomial r) where
     show (Product a b) = "(" ++ show a ++ ") * (" ++ show b ++ ")"
     show (Sum a b) = show a ++ " + " ++ show b
 
-instance {-# OVERLAPS #-} Show (Polynomial Rational) where
-    show :: Polynomial Rational -> String
-    show (Monomial c d)
-        | d == 1 = showCoeff True ++ "x"
-        | d == 0 = showCoeff False
-        | otherwise = showCoeff True ++ "x^" ++ show d
-        where
-            showCoeff :: Bool -> String
-            showCoeff b
-                | c == 1 && b = ""
-                | c == (-1) && b = "-"
-                | R.denominator c == 1 = show (R.numerator c)
-                | R.numerator c == 0 = "0"
-                | otherwise = show (R.numerator c) ++ "/" ++ show (R.denominator c)
-    show (Product a b) = "(" ++ show a ++ ") * (" ++ show b ++ ")"
-    show (Sum a b) = show a ++ " + " ++ show b
+
+-- instance {-# OVERLAPS #-} Show (Polynomial Rational) where
+--     show :: Polynomial Rational -> String
+--     show (Monomial c d)
+--         | d == 1 = showCoeff True ++ "x"
+--         | d == 0 = showCoeff False
+--         | otherwise = showCoeff True ++ "x^" ++ show d
+--         where
+--             showCoeff :: Bool -> String
+--             showCoeff b
+--                 | c == 1 && b = ""
+--                 | c == (-1) && b = "-"
+--                 | R.denominator c == 1 = show (R.numerator c)
+--                 | R.numerator c == 0 = "0"
+--                 | otherwise = show (R.numerator c) ++ "/" ++ show (R.denominator c)
+--     show (Product a b) = "(" ++ show a ++ ") * (" ++ show b ++ ")"
+--     show (Sum a b) = show a ++ " + " ++ show b
+
+divide :: Ring r => Polynomial r -> Polynomial r -> Polynomial r
+divide (Monomial c d) (Monomial c' d')
+    | d >= d' = Monomial (c /. c') (d - d')
+    | otherwise = 0
+divide a b
+    | degree a < degree b = 0
+    | isZero q = 0
+    | otherwise = (+) q $ divide r (expand b)
+    where
+        q = Monomial (leadingCoeff a /. leadingCoeff b) (degree a - degree b)
+        r = expand $ a - (q * b)
+
+
+polyDivMod :: ED r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
+polyDivMod a@(Monomial c d) (Monomial c' d')
+    | d >= d' = (Monomial (c // c') (d - d'), Monomial (c % c') d)
+    | otherwise = (0, a)
+polyDivMod a b
+    | degree a < degree b = (0, a)
+    | isZero q = (0, r)
+    | otherwise = (\(q', r') -> (q + q', r')) $ polyDivMod r (expand b)
+    where
+        q = Monomial (leadingCoeff a // leadingCoeff b) (degree a - degree b)
+        r = expand $ a - (q * b)
 
 
 degree :: Ring r => Polynomial r -> Degree
@@ -128,7 +160,6 @@ leadingCoeff = leadingCoeff_ . expand
         leadingCoeff_ (Sum a b) | degree a > degree b = leadingCoeff_ a
                                 | otherwise = leadingCoeff_ b
 
-
 fromList :: Ring r => [(r, Degree)] -> Polynomial r
 fromList [] = monomial 0 0
 fromList lst = foldr1 (*) $ (uncurry monomial) <$> lst
@@ -139,19 +170,6 @@ toList = toList_ . expand
         toList_ (Sum a b) = (toList_ a) ++ (toList_ b)
         toList_ (Monomial c d) = [(c,d)]
         toList_ _ = undefined
-
-
-divide :: Ring r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
-divide (Monomial c d) (Monomial c' d') 
-    | d >= d' = (Monomial (c // c') (d - d'), Monomial (c % c') (d - d'))
-    | otherwise = (0, (Monomial c d))
-divide a b | degree a < degree b = (0, a)
-           | otherwise = let q = Monomial (leadingCoeff a // leadingCoeff b) (degree a - degree b)
-                             r = expand $ a - (q * b)
-                         in if isZero q 
-                            then (0, r)
-                            else case divide r (expand b) of
-                             (q', r') -> (q + q', r') 
 
 
 -- differentiate
@@ -232,7 +250,7 @@ evaluate r (Monomial c d) = c * (r ^ d)
 evaluate r (Sum a b) = (evaluate r a) + (evaluate r b)
 evaluate r (Product a b) = (evaluate r a) * (evaluate r b)
 
-coercemonic :: Ring r => Polynomial r -> (r, Polynomial r)
+coercemonic :: Field r => Polynomial r -> (r, Polynomial r)
 coercemonic p = if isUnit lc then (lc, (monomial lcinv 0) * p) else (1, p)
     where
         lcinv = (1 // lc)
@@ -242,7 +260,7 @@ monomial :: r -> Degree -> Polynomial r
 monomial = Monomial
 
 purePart :: GCDD r => Polynomial r -> (r, Polynomial r)
-purePart p = (c, p // (monomial c 0))
+purePart p = (c, (flip (/.) c) <$> expand p)
     where
         c = foldr1 gcd_ . fmap fst . toList $ p
 

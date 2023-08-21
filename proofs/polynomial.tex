@@ -1,0 +1,41 @@
+\documentclass[12pt]{article}
+\usepackage[scale=0.8]{geometry}
+\usepackage{amsmath,amssymb}
+
+\title{Polynomial.hs - Proofs}
+\author{Joel Richardson}
+
+\begin{document}
+
+\maketitle
+
+\section{divide}
+\begin{verbatim}
+divide :: Ring r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
+divide a@(Monomial c d) (Monomial c' d') 
+        | d >= d' = (Monomial (c // c') (d - d'), Monomial (c `remainder` c') (d - d'))
+        | otherwise = (0, a)
+divide a b
+        | degree a < degree b = (0, a)
+        | isZero q = (0, r)
+        | otherwise = (\(q', r') -> (q + q', r')) $ divide r (expand b)
+    where
+        q = Monomial (leadingCoeff a // leadingCoeff b) (degree a - degree b)
+        r = expand $ a - (q * b)
+\end{verbatim}
+\subsection*{Definition}
+Suppose $R$ is some ring, then $divide : R[x] \times R[x] \to R[x] \times R[x]$ is a function such that if $divide : (a,b) \mapsto (q,r)$ then:
+\begin{enumerate}
+    \item $a = q\cdot b + r$
+    \item If there exists $q'$ such that $a = q'\cdot b$ then $q = q'$
+    \item If $R$ is a field, then no $r' \in R[x]$ exists such that $degree(r') < degree(r)$ and $a = q\cdot b + r'$
+\end{enumerate}
+\subsection*{Proof}
+First suppose $a = c_ax^{d_a}$ and $b = c_bx^{d_b}$. Then we have $$divide : (a,b) \mapsto \left(\frac{c_a}{c_b}x^{d_a - d_b}, (c_a \mod c_b)x^{d_a - d_b} \right)$$
+and, \begin{align*}
+    c_bx^{d_b} \cdot \frac{c_a}{c_b}x^{d_a - d_b} + (c_a \mod c_b)x^{d_a} &= 
+    c_b\cdot (c_a // c_b)x^{d_a} + (c_a \mod c_b)x^{d_a - d_b}
+\end{align*}
+
+
+\end{document}
