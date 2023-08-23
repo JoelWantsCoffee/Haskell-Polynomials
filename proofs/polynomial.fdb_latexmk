@@ -1,11 +1,11 @@
 # Fdb version 4
-["xdvipdfmx"] 1692580956 "polynomial.xdv" "polynomial.pdf" "polynomial" 1692580956 0
-  "polynomial.xdv" 1692580956 10304 cdb97ce3474aac04d2b6e640c2df32f0 "xelatex"
+["xdvipdfmx"] 0 "polynomial.xdv" "polynomial.pdf" "polynomial" 0 -1
+  "polynomial.xdv" 1692672971 11000 c3c4b26c42182c44cb9e7c5a1708be85 "xelatex"
   (generated)
   "polynomial.pdf"
   (rewritten before read)
-["xelatex"] 1692580956 "/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex" "polynomial.xdv" "polynomial" 1692580956 0
-  "/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex" 1692580955 1535 1f5736674ac7cc61f48a8db937b57eb7 ""
+["xelatex"] 1692672971 "/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex" "polynomial.xdv" "polynomial" 1692672971 2
+  "/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex" 1692672971 1891 c45a8145034a39c3087c965c60dbfe0a ""
   "/opt/homebrew/Cellar/texlive/20230313/share/texmf-dist/fonts/map/fontname/texfonts.map" 1678549815 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/opt/homebrew/Cellar/texlive/20230313/share/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1678549815 1004 54797486969f23fa377b128694d548df ""
   "/opt/homebrew/Cellar/texlive/20230313/share/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1678549815 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -42,8 +42,8 @@
   "/opt/homebrew/Cellar/texlive/20230313/share/texmf-dist/tex/latex/l3backend/l3backend-xetex.def" 1678549815 32346 879686206fa618f4f5073ad4bd48feda ""
   "/opt/homebrew/Cellar/texlive/20230313/share/texmf-dist/web2c/texmf.cnf" 1678549815 40748 4081c8bc921e56c865f975bd762e388c ""
   "/opt/homebrew/Cellar/texlive/20230313/share/texmf-var/web2c/xetex/xelatex.fmt" 1678549815 10503070 78e6943db4e100c0bfaa4ee5be91a076 ""
-  "polynomial.aux" 1692580956 126 d4bfaa8b8b13b53e43150bc2e4fb1215 "xelatex"
-  "polynomial.tex" 1692580955 1535 1f5736674ac7cc61f48a8db937b57eb7 ""
+  "polynomial.aux" 1692672971 128 b86ca3c0b34d8202785da7e3a89ff4bc "xelatex"
+  "polynomial.tex" 1692672971 1891 c45a8145034a39c3087c965c60dbfe0a ""
   (generated)
   "polynomial.aux"
   "polynomial.log"

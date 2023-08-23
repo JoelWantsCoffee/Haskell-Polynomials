@@ -23,16 +23,6 @@ extendedGcd a b | isZero b  = (a, 1, 0)
                     in (d, y, x - q * y)
 
 {-
-    7 5
-        5 2
-            2 1
-                1 0
-                (1, 1, 0)
-
-
--}
-
-{-
 
 https://en.wikipedia.org/wiki/Hensel%27s_lemma#Linear_lifting
 
@@ -256,6 +246,6 @@ instance UFD (Polynomial Rational) where
         
     squarefree = squarefree_field
 
-instance UFD (Polynomial Double) where
-    factor_squarefree = (\(u,lst) -> (fromRational <$> u, (fmap fromRational) <$> lst)) . factor_squarefree @(Polynomial Rational) . fmap toRational
-    squarefree = fmap fromRational . squarefree_field . fmap toRational
+-- instance UFD (Polynomial Double) where
+--     factor_squarefree = (\(u,lst) -> (fromRational <$> u, (fmap fromRational) <$> lst)) . factor_squarefree @(Polynomial Rational) . fmap toRational
+--     squarefree = fmap fromRational . squarefree_field . fmap toRational

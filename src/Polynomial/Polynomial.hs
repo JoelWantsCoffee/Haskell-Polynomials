@@ -23,55 +23,16 @@ import qualified Data.Ratio as R
 type Degree = Integer
 
 data Polynomial r
-            = Monomial r Degree 
-            | Sum (Polynomial r) (Polynomial r)  
+            = Monomial r Degree
+            | Sum (Polynomial r) (Polynomial r)
             | Product (Polynomial r) (Polynomial r)
 
-instance (Ord r, Ring r) => Ord (Polynomial r) where
-    compare p1 p2 = if (degree p1) == (degree p2)
-        then compare (toList p1) (toList p2)
-        else compare (degree p1) (degree p2)
-
-instance Ring (Polynomial r) => Eq (Polynomial r) where
-    (==) x y = isZero (x - y)
-
-instance Num r => Num (Polynomial r) where
-    (+) = Sum
-    (*) = Product
-    abs = id
-    signum _ = Monomial 1 0
-    negate = (*) (Monomial (-1) 0)
-    fromInteger i = Monomial (Prelude.fromInteger i) 0
 
 instance Functor Polynomial where
     fmap f (Monomial r d) = Monomial (f r) d
     fmap f (Sum a b) = Sum (fmap f a) (fmap f b)
     fmap f (Product a b) = Product (fmap f a) (fmap f b)
 
-instance Ring r => Ring (Polynomial r) where
-    (/.) a = expand . divide a
-    isUnit p = (degree p == 0) && (isUnit $ leadingCoeff p)
-    isZero p = isZero_ $ expand p
-        where
-            isZero_ (Sum a b) = (isZero_ a) && (isZero_ b)
-            isZero_ (Monomial a _) = isZero a
-            isZero_ (Product a b) = (isZero_ a) || (isZero_ b)
-
-instance Field r => ED (Polynomial r) where
-    (//) a = expand . fst . polyDivMod a
-    (%) a = expand . snd . polyDivMod a
-    div_ = polyDivMod
-    euclidean = degree
-
-instance ED r => GCDD (Polynomial r) where
-    gcd_ :: ED r => Polynomial r -> Polynomial r -> Polynomial r
-    gcd_ f g    | isZero f = g
-                | isZero g = f
-                | degree g < 1 = 1
-                | otherwise = let
-                        (fc, f_) = purePart f
-                        (gc, g_) = purePart g
-                    in (monomial (gcd_ fc gc) 0) * (gcd_ g_ (snd $ polyDivMod f_ g_))
 
 instance (Show r, Ring r) => Show (Polynomial r) where
     show :: Polynomial r -> String
@@ -106,40 +67,68 @@ instance (Show r, Ring r) => Show (Polynomial r) where
 --     show (Product a b) = "(" ++ show a ++ ") * (" ++ show b ++ ")"
 --     show (Sum a b) = show a ++ " + " ++ show b
 
-divide :: Ring r => Polynomial r -> Polynomial r -> Polynomial r
-divide (Monomial c d) (Monomial c' d')
-    | d >= d' = Monomial (c /. c') (d - d')
-    | otherwise = 0
-divide a b
-    | degree a < degree b = 0
-    | isZero q = 0
-    | otherwise = (+) q $ divide r (expand b)
+
+instance Num r => Num (Polynomial r) where
+    (+) = Sum
+    (*) = Product
+    abs = id
+    signum _ = Monomial 1 0
+    negate = (*) (Monomial (-1) 0)
+    fromInteger i = Monomial (fromInteger i) 0
+
+
+instance (Ord r, Ring r) => Ord (Polynomial r) where
+    compare p1 p2 = if (degree p1) == (degree p2)
+        then compare (toList p1) (toList p2)
+        else compare (degree p1) (degree p2)
+
+
+instance Ring (Polynomial r) => Eq (Polynomial r) where
+    (==) x y = isZero (x - y)
+
+
+instance Ring r => Ring (Polynomial r) where
+    (/.) a = expand . divide a
+    isUnit p = (degree p == 0) && (isUnit $ leadingCoeff p)
+    isZero p = isZero_ $ expand p
+        where
+            isZero_ (Sum a b) = (isZero_ a) && (isZero_ b)
+            isZero_ (Monomial a _) = isZero a
+            isZero_ (Product a b) = (isZero_ a) || (isZero_ b)
+
+
+instance ED r => GCDD (Polynomial r) where
+    gcd_ :: ED r => Polynomial r -> Polynomial r -> Polynomial r
+    gcd_ f g    | isZero f = g
+                | isZero g = f
+                | degree g < 1 = base
+                | otherwise = if (not $ isUnit $ leadingCoeff g_)
+                    then base
+                    else base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
+                where
+                    (fc, f_) = purePart f   
+                    (gc, g_) = purePart g
+                    base = monomial (gcd_ fc gc) 0
+
+
+instance Field r => ED (Polynomial r) where
+    (//) a = expand . fst . polyDivMod a
+    (%) a = expand . snd . polyDivMod a
+    div_ = polyDivMod
+    euclidean = degree
+
+
+fromList :: Ring r => [(r, Degree)] -> Polynomial r
+fromList [] = monomial 0 0
+fromList lst = foldr1 (*) $ (uncurry monomial) <$> lst
+
+
+toList :: Ring r => Polynomial r -> [(r, Degree)]
+toList = toList_ . expand
     where
-        q = Monomial (leadingCoeff a /. leadingCoeff b) (degree a - degree b)
-        r = expand $ a - (q * b)
-
-
-polyDivMod :: ED r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
-polyDivMod a@(Monomial c d) (Monomial c' d')
-    | d >= d' = (Monomial (c // c') (d - d'), Monomial (c % c') d)
-    | otherwise = (0, a)
-polyDivMod a b
-    | degree a < degree b = (0, a)
-    | isZero q = (0, r)
-    | otherwise = (\(q', r') -> (q + q', r')) $ polyDivMod r (expand b)
-    where
-        q = Monomial (leadingCoeff a // leadingCoeff b) (degree a - degree b)
-        r = expand $ a - (q * b)
-
-
-degree :: Ring r => Polynomial r -> Degree
-degree = degree_ . expand
-    where
-        degree_ :: Ring r => Polynomial r -> Degree
-        degree_ (Monomial 0 _) = 0
-        degree_ (Monomial _ deg) = deg
-        degree_ (Sum p1 p2) = max (degree p1) (degree p2)
-        degree_ (Product p1 p2) = degree p1 + degree p2
+        toList_ (Sum a b) = (toList_ a) ++ (toList_ b)
+        toList_ (Monomial c d) = [(c,d)]
+        toList_ _ = undefined
 
 
 leadingTerm :: Ring r => Polynomial r -> Polynomial r
@@ -160,16 +149,47 @@ leadingCoeff = leadingCoeff_ . expand
         leadingCoeff_ (Sum a b) | degree a > degree b = leadingCoeff_ a
                                 | otherwise = leadingCoeff_ b
 
-fromList :: Ring r => [(r, Degree)] -> Polynomial r
-fromList [] = monomial 0 0
-fromList lst = foldr1 (*) $ (uncurry monomial) <$> lst
 
-toList :: Ring r => Polynomial r -> [(r, Degree)]
-toList = toList_ . expand
+coeff :: Ring r => Degree -> Polynomial r -> r
+coeff i_ p = coeff_ i_ (expand p)
     where
-        toList_ (Sum a b) = (toList_ a) ++ (toList_ b)
-        toList_ (Monomial c d) = [(c,d)]
-        toList_ _ = undefined
+        coeff_ :: Ring r => Degree -> Polynomial r -> r
+        coeff_ i (Sum (Monomial c d) b) = if d == i then c else coeff_ i b
+        coeff_ i (Sum b (Monomial c d)) = if d == i then c else coeff_ i b
+        coeff_ i (Monomial c d) = if d == i then c else 0
+        coeff_ _ _ = error "Polynomial must be simplified." 
+
+degree :: Ring r => Polynomial r -> Degree
+degree = degree_ . expand
+    where
+        degree_ :: Ring r => Polynomial r -> Degree
+        degree_ (Monomial 0 _) = 0
+        degree_ (Monomial _ deg) = deg
+        degree_ (Sum p1 p2) = max (degree p1) (degree p2)
+        degree_ (Product p1 p2) = degree p1 + degree p2
+
+
+purePart :: GCDD r => Polynomial r -> (r, Polynomial r)
+purePart p = (c, (flip (/.) c) <$> expand p)
+    where
+        c = foldr1 gcd_ . fmap fst . toList $ p
+
+
+coercemonic :: Field r => Polynomial r -> (r, Polynomial r)
+coercemonic p = if isUnit lc then (lc, (monomial lcinv 0) * p) else (1, p)
+    where
+        lcinv = (1 // lc)
+        lc = leadingCoeff p
+
+
+evaluate :: Ring r => r -> Polynomial r -> r
+evaluate r (Monomial c d) = c * (r ^ d)
+evaluate r (Sum a b) = (evaluate r a) + (evaluate r b)
+evaluate r (Product a b) = (evaluate r a) * (evaluate r b)
+
+
+monomial :: r -> Degree -> Polynomial r
+monomial = Monomial
 
 
 -- differentiate
@@ -181,13 +201,68 @@ differentiate (Sum a b) = (differentiate a) + (differentiate b)
 differentiate (Product a b) = ((differentiate a) * b) + (a * (differentiate b)) -- product rule
 differentiate a = differentiate $ ungroup a -- what
 
--- eliminate multiplication, GCD, Differentiate
+
+divide :: Ring r => Polynomial r -> Polynomial r -> Polynomial r
+divide (Monomial c d) (Monomial c' d')
+    | d >= d' = Monomial (c /. c') (d - d')
+    | otherwise = 0
+divide a b
+    | degree a < degree b = 0
+    | isZero q = 0
+    | otherwise = (+) q $ divide r (expand b)
+    where
+        q = Monomial (leadingCoeff a /. leadingCoeff b) (degree a - degree b)
+        r = expand $ a - (q * b)
+
+{-  DEFINITION
+
+    polyDivMod : a -> b -> (q,r)
+        returns q,r such that:
+        1.  a = b * q + r
+        2.  if there exists q' such that a = b * q' then r = 0
+        3.  if R is a field then r = 0, or degree( r ) < degree( b )
+    
+    
+    PROOF
+        case 1: ax^c -> bx^d -> ( qx^(c-d) , rx^c  ) for (q,r) = ediv(a,b)
+            1.  qx^(c-d) * bx^d + rx^c  = bqx^c + rx^c
+                                        = (bq + r)x^c
+                                        = ax^c
+            2.  ax^c = bx^d * q'x^e
+                        => e = c - d
+                        => a = b * q'
+                        => r = 0
+                        => rx^c = 0
+
+            3.  R is a field 
+                        => a | b
+                        => r = 0 
+                        => rx^c = 0
+        
+        case 2: (ax^n + f_a(x)) -> (bx^m + f_b(x)) -> ( (a/b)x^(n-m) + g() , rx^c ) for c >= d and (q,r) = ediv(a,b)
+            1.  
+
+
+-}
+polyDivMod :: ED r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
+polyDivMod a@(Monomial c d) (Monomial c' d')
+    | d < d' = (0, a)
+    | otherwise = (Monomial (c // c') (d - d'), Monomial (c % c') d)
+polyDivMod a b
+    | degree a < degree b = (0, a)
+    | isZero q = (0, r)
+    | otherwise = (\(q', r') -> (q + q', r')) $ polyDivMod r (expand b)
+    where
+        q = Monomial (leadingCoeff a // leadingCoeff b) (degree a - degree b)
+        r = expand $ a - (q * b)
+
+-- remove Product
 ungroup :: Ring r => Polynomial r -> Polynomial r
 ungroup (Monomial  c d) = Monomial c d
 ungroup (Sum f g) = Sum (ungroup f) (ungroup g)
 ungroup (Product (Monomial c0 d0) (Monomial c1 d1)) = Monomial (c0 * c1) (d0 + d1)
-ungroup (Product (Sum f g) h) = Sum (ungroup $ Product f h) (ungroup $ Product g h)  -- right dist
-ungroup (Product f (Sum g h)) = Sum (ungroup $ Product f g) (ungroup $ Product f h)  -- left dist
+ungroup (Product (Sum f g) h) = Sum (ungroup $ Product f h) (ungroup $ Product g h)
+ungroup (Product f (Sum g h)) = Sum (ungroup $ Product f g) (ungroup $ Product f h)
 ungroup (Product f g) = ungroup $ Product (ungroup f) (ungroup g)
 
 -- reduce to only Sum and Monomial constructors
@@ -233,36 +308,3 @@ knockThemDown a = knockThemDown $ sortThemOut a
 -- convert to an only-right-recursive tree where each monomial degree appears at most once 
 expand :: Ring r => Polynomial r -> Polynomial r
 expand = knockThemDown . sortThemOut . setThemUp
-
-
-coeff :: Ring r => Degree -> Polynomial r -> r
-coeff i_ p = coeff_ i_ (expand p)
-    where
-        coeff_ :: Ring r => Degree -> Polynomial r -> r
-        coeff_ i (Sum (Monomial c d) b) = if d == i then c else coeff_ i b
-        coeff_ i (Sum b (Monomial c d)) = if d == i then c else coeff_ i b
-        coeff_ i (Monomial c d) = if d == i then c else 0
-        coeff_ _ _ = error "Polynomial must be simplified." 
-
-
-evaluate :: Ring r => r -> Polynomial r -> r
-evaluate r (Monomial c d) = c * (r ^ d)
-evaluate r (Sum a b) = (evaluate r a) + (evaluate r b)
-evaluate r (Product a b) = (evaluate r a) * (evaluate r b)
-
-coercemonic :: Field r => Polynomial r -> (r, Polynomial r)
-coercemonic p = if isUnit lc then (lc, (monomial lcinv 0) * p) else (1, p)
-    where
-        lcinv = (1 // lc)
-        lc = leadingCoeff p
-
-monomial :: r -> Degree -> Polynomial r
-monomial = Monomial
-
-purePart :: GCDD r => Polynomial r -> (r, Polynomial r)
-purePart p = (c, (flip (/.) c) <$> expand p)
-    where
-        c = foldr1 gcd_ . fmap fst . toList $ p
-
--- pure_part :: GCDD r => Polynomial r -> Polynomial r
--- pure_part p = (//) p $ flip monomial 0 . foldr1 gcd_ . fmap fst . toList $ p

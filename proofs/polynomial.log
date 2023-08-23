@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Homebrew) (preloaded format=xelatex 2023.3.21)  21 AUG 2023 11:22
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Homebrew) (preloaded format=xelatex 2023.3.21)  22 AUG 2023 12:56
 entering extended mode
  \write18 enabled.
  file:line:error style messages enabled.
@@ -190,25 +190,264 @@ LaTeX Font Info:    Trying to load font information for U+msb on input line 10.
  (/opt/homebrew/Cellar/texlive/20230313/share/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-Overfull \hbox (2.96198pt too wide) in paragraph at lines 25--25
-[]\TU/lmtt/m/n/12 divide :: Ring r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)[] 
+Overfull \hbox (15.32198pt too wide) in paragraph at lines 25--25
+[]\TU/lmtt/m/n/12 polyDivMod :: ED r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)[] 
  []
 
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Extra }, or forgotten \right.
+<template> }
+            $}\ifmeasuring@ \savefieldlength@ \fi \set@field \endtemplate 
+l.42 \end{align*}
+                 
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
 
-Overfull \hbox (46.22186pt too wide) in paragraph at lines 25--25
-[]        \TU/lmtt/m/n/12 | d >= d' = (Monomial (c // c') (d - d'), Monomial (c `remainder` c') (d - d'))[] 
- []
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing \right. inserted.
+<inserted text> 
+                \right .
+l.42 \end{align*}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing } inserted.
+<inserted text> 
+                }
+l.42 \end{align*}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing } inserted.
+<inserted text> 
+                }
+l.42 \end{align*}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Extra \right.
+<argument> ...m + b_{m-1}x^{m-1} + \ldots \right )
+                                                   \\ &= \begin {cases} qx^{...
+l.42 \end{align*}
+                 
+I'm ignoring a \right that had no matching \left.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing { inserted.
+<inserted text> 
+                {
+l.42 \end{align*}
+                 
+I've put in what seems to be necessary to fix
+the current column of the current alignment.
+Try to go on, since this might almost work.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Extra }, or forgotten \right.
+<template> }
+            $}\ifmeasuring@ \savefieldlength@ \fi \set@field \endtemplate 
+l.42 \end{align*}
+                 
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing \right. inserted.
+<inserted text> 
+                \right .
+l.42 \end{align*}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing } inserted.
+<inserted text> 
+                }
+l.42 \end{align*}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing } inserted.
+<inserted text> 
+                }
+l.42 \end{align*}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Extra \right.
+<argument> ...m + b_{m-1}x^{m-1} + \ldots \right )
+                                                   \\ &= \begin {cases} qx^{...
+l.42 \end{align*}
+                 
+I'm ignoring a \right that had no matching \left.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:42: Missing \endgroup inserted.
+<inserted text> 
+                \endgroup 
+l.42 \end{align*}
+                 
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+Runaway argument?
+\omit\@nil \omit \kern -\alignsep@ \iftag@ \setboxz@h {\@lign \strut@ \ETC.
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Paragraph ended before \@tempb was complete.
+<to be read again> 
+                   \par 
+l.43 
+     
+I suspect you've forgotten a `}', causing me to apply this
+control sequence to too much text. How can we recover?
+My plan is to forget the whole thing and hope for the best.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing $ inserted.
+<inserted text> 
+                $
+l.43 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing } inserted.
+<inserted text> 
+                }
+l.43 
+     
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing } inserted.
+<inserted text> 
+                }
+l.43 
+     
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing \cr inserted.
+<inserted text> 
+                \cr 
+l.43 
+     
+I'm guessing that you meant to end an alignment here.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing { inserted.
+<inserted text> 
+                {
+l.43 
+     
+I've put in what seems to be necessary to fix
+the current column of the current alignment.
+Try to go on, since this might almost work.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing { inserted.
+<inserted text> 
+                {
+l.43 
+     
+I've put in what seems to be necessary to fix
+the current column of the current alignment.
+Try to go on, since this might almost work.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Extra }, or forgotten $.
+<recently read> }
+                 
+l.43 
+     
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing $ inserted.
+<inserted text> 
+                $
+l.43 
+     
+I've inserted a begin-math/end-math symbol since I think
+you left one out. Proceed, with fingers crossed.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing } inserted.
+<inserted text> 
+                }
+l.43 
+     
+I've inserted something that you may have forgotten.
+(See the <inserted text> above.)
+With luck, this will get me unwedged. But if you
+really didn't forget anything, try typing `2' now; then
+my insertion and my current dilemma will both disappear.
+
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:43: Missing $$ inserted.
+<to be read again> 
+                   \tex_par:D 
+l.43 
+     
+Displays can use special alignments (like \eqalignno)
+only if nothing but the alignment itself is between $$'s.
 
 [1
 
-] (./polynomial.aux) ) 
-Here is how much of TeX's memory you used:
- 2368 strings out of 476683
- 36971 string characters out of 5795226
- 1853018 words of memory out of 5000000
- 22625 multiletter control sequences out of 15000+600000
- 519587 words of font info for 68 fonts, out of 8000000 for 9000
- 1348 hyphenation exceptions out of 8191
- 55i,8n,62p,255b,211s stack positions out of 10000i,1000n,20000p,200000b,200000s
+]
 
-Output written on polynomial.xdv (1 page, 10304 bytes).
+/Users/joel/Documents/uni/HONOURS/haskell/proofs/polynomial.tex:53: LaTeX Error: \begin{align*} on input line 35 ended by \end{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.53 \end{document}
+                   
+Your command was ignored.
+Type  I <command> <return>  to replace it with another command,
+or  <return>  to continue without it.
+
+[2] (./polynomial.aux) )
+(\end occurred inside a group at level 1)
+
+### semi simple group (level 1) entered at line 35 (\begingroup)
+### bottom level 
+Here is how much of TeX's memory you used:
+ 2374 strings out of 476683
+ 37139 string characters out of 5795226
+ 1853018 words of memory out of 5000000
+ 22627 multiletter control sequences out of 15000+600000
+ 519603 words of font info for 70 fonts, out of 8000000 for 9000
+ 1348 hyphenation exceptions out of 8191
+ 55i,16n,62p,255b,247s stack positions out of 10000i,1000n,20000p,200000b,200000s
+
+Output written on polynomial.xdv (2 pages, 11000 bytes).

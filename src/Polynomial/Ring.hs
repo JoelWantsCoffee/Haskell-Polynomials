@@ -29,18 +29,64 @@ import GHC.TypeNats
 import Data.Reflection
 import Data.Proxy
 
+type NonZero a = a
+
+
+
+{-  DEFINITIONS
+
+    (/.) : a -> b -> q
+        such that a = q * b, if such a q exists,
+        otherwise behaviour is undefined
+
+    (isUnit) : a -> Bool
+        returns true if some a^(-1) exists such
+        that a * a^(-1) = 1. Otherwise returns false
+    
+    (isZero) : a -> Bool
+        returns true if forall b, a + b = b + a = b
+        otherwise returns false
+    
+-}
 class (Num a, Ord a, Eq a) => Ring a where
-    (/.) :: a -> a -> a
+    (/.) :: a -> NonZero a -> a 
     isUnit :: a -> Bool
     isZero :: a -> Bool
 
+{-  DEFINITIONS
+
+    gcd_ : a -> b -> d
+        returns d, m such that d|a and d|b, and if
+        for some c, c|a and c|b then c|d
+
+-}
 class Ring a => GCDD a where
     gcd_ :: a -> a -> a
 
+{-  DEFINITIONS
+
+    factor_squarefree : a -> (u, lst)
+        if a is squarefree return some unit u and
+        list of irreducibles lst sucht that 
+        a = fold (*) u lst, otherwise behaviour is
+        undefined.
+
+    squarefree : a -> b
+        returns b equal to a with any squares removed
+
+-}
 class GCDD a => UFD a where
     factor_squarefree :: a -> (a, [a])
     squarefree :: a -> a
 
+{-  DEFINITIONS
+
+    div_ :: a -> a -> (a,a)
+    (//) :: a -> a -> a
+    (%) :: a -> a -> a
+    euclidean :: a -> Integer
+        euclidean division.
+-}
 class GCDD a => ED a where
     (//) :: a -> a -> a
     (//) = (/.)
@@ -49,10 +95,21 @@ class GCDD a => ED a where
     div_ :: a -> a -> (a,a)
     div_ a b = (a // b, a % b) 
 
+
+{-  DEFINITIONS
+
+    inv : a -> b
+        for any non-zero a return b such that a * b = 1
+-}
 class ED a => Field a where
     inv :: a -> a
     inv = (//) 1
 
+{-  PROOFS
+
+    # all given by ghc #
+
+-}
 instance Ring Integer where
     (/.) a b = (\(q,r) -> if r == 0 then q else 0) $ divMod a b
     isUnit 1 = True
@@ -60,77 +117,110 @@ instance Ring Integer where
     isUnit _ = False
     isZero = (==) 0
 
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance GCDD Integer where
     gcd_ = gcd
 
+{-  PROOFS
+
+    # not implemented #
+    
+-}
 instance UFD Integer where
     factor_squarefree = undefined
     squarefree = undefined
 
+
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance ED Integer where
     (//) = div
     (%) = mod
     div_ = divMod
     euclidean = id
 
+
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance Ring Rational where
     (/.) = (/)
     isUnit = (/=) 0
     isZero = (==) 0
 
-instance GCDD Rational where
-    gcd_ a b 
-        | a > b = a
-        | otherwise = b
 
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
+instance GCDD Rational where
+    gcd_ a b = a
+
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance ED Rational where
     (%) 0 b = b
     (%) _ _ = 0
     euclidean _ = 0
 
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance UFD Rational where
     factor_squarefree a = (a, [])
     squarefree = id
 
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance Field Rational
-
-
-instance Ring Double where
-    (/.) = (/)
-    isUnit = (/=) 0
-    isZero = (==) 0
-
-instance GCDD Double where
-    gcd_ a b
-        | a > b = a
-        | otherwise = b
-
-instance ED Double where
-    (%) 0 b = b
-    (%) _ _ = 0
-    euclidean _ = 0
-
-instance UFD Double where
-    factor_squarefree a = (a, [])
-    squarefree = id
-
-instance Field Double
 
 
 -- INTEGER QUOTIENT RINGS 
 
 type FiniteCyclicRing (n :: Nat) = PF.PrimeField n
 
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance KnownNat p => Ring (FiniteCyclicRing p) where
     (/.) = (/)
     isUnit = (/=) 0
     isZero = (==) 0
 
-instance KnownNat p => GCDD (FiniteCyclicRing p) where
-    gcd_ a b
-        | a > b = a
-        | otherwise = b
+{-  PROOFS
 
+    # all given by ghc #
+    
+-}
+instance KnownNat p => GCDD (FiniteCyclicRing p) where
+    gcd_ a 0 = a
+    gcd_ a b = gcd_ a (a % b)
+
+{-  PROOFS
+
+    # all given by ghc #
+    
+-}
 instance KnownNat p => ED (FiniteCyclicRing p) where
     (//) = (/)
     (%) 0 _ = 0
@@ -139,6 +229,11 @@ instance KnownNat p => ED (FiniteCyclicRing p) where
         | otherwise = a - b * (a // b)
     euclidean = PF.toInteger
 
+{-  PROOFS
+
+    # not implemented #
+    
+-}
 instance KnownNat p => UFD (FiniteCyclicRing p) where
     factor_squarefree _ = undefined
     squarefree _ = undefined
