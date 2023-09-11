@@ -78,6 +78,7 @@ class Ring a => GCDD a where
 class GCDD a => UFD a where
     factor_squarefree :: a -> (a, [a])
     squarefree :: a -> a
+    irreducible :: a -> Bool
 
 {-  DEFINITIONS
 
@@ -133,6 +134,10 @@ instance GCDD Integer where
 instance UFD Integer where
     factor_squarefree = undefined
     squarefree = undefined
+    irreducible i   | isZero i  = False
+                    | isUnit i  = False
+                    | i > 1     = null [ x | x <- [2 .. floor (sqrt (fromIntegral i :: Double))], i `mod` x == 0 ]
+                    | otherwise = irreducible (-i)
 
 
 {-  PROOFS
@@ -164,7 +169,7 @@ instance Ring Rational where
     
 -}
 instance GCDD Rational where
-    gcd_ a b = a
+    gcd_ a _ = a
 
 {-  PROOFS
 
@@ -184,6 +189,7 @@ instance ED Rational where
 instance UFD Rational where
     factor_squarefree a = (a, [])
     squarefree = id
+    irreducible _ = False 
 
 {-  PROOFS
 
@@ -237,6 +243,7 @@ instance KnownNat p => ED (FiniteCyclicRing p) where
 instance KnownNat p => UFD (FiniteCyclicRing p) where
     factor_squarefree _ = undefined
     squarefree _ = undefined
+    irreducible _ = False
 
 
 -- PRIME STUFF

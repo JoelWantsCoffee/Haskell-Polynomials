@@ -10,8 +10,7 @@ import Polynomial.CustomMatrix
 import Data.Matrix (Matrix, fromLists, toLists, identity, rref, (<|>))
 import Data.Either.Combinators qualified as Either
 import Data.List qualified as List
-import Data.FiniteField.PrimeField qualified as PrimeField
-import GHC.TypeNats
+import GHC.TypeNats()
 import Data.Proxy
 
 fill :: KnownPrime p => Integer -> Integer -> Polynomial (PrimeField p) -> Matrix (PrimeField p)
@@ -102,3 +101,8 @@ berlekamp p =
 instance (KnownPrime p) => UFD (Polynomial (PrimeField p)) where
   factor_squarefree = berlekamp
   squarefree = squarefree_field
+  irreducible p | (squarefree_field monic) /= monic = False
+                | (==) 1 . List.length . snd . berlekamp $ p = True
+                | otherwise = False
+              where
+                monic = p // (monomial (leadingCoeff p) 0)

@@ -230,10 +230,12 @@ instance UFD (Polynomial Integer) where
     squarefree :: Polynomial Integer -> Polynomial Integer
     squarefree = fmap Ratio.numerator . squarefree_field . fmap (fromInteger :: Integer -> Rational)
 
+    irreducible p = (irreducible $ fromInteger @(PrimeField (AssumePrime 71)) <$> p) || (irreducible $ fromInteger @(PrimeField (AssumePrime 67)) <$> p)
+
 
 instance UFD (Polynomial Rational) where
     factor_squarefree :: Polynomial Rational -> (Polynomial Rational, [Polynomial Rational])
-    factor_squarefree p = 
+    factor_squarefree p =
         (\(u_, lst) -> (expand $ (monomial (1/u) 0) * (fromInteger <$> u_), snd . coercemonic . (fmap fromInteger) <$> lst))
         $ factor_squarefree @(Polynomial Integer)
         $ fmap Ratio.numerator
@@ -245,6 +247,7 @@ instance UFD (Polynomial Rational) where
             u = fromInteger $ foldr1 lcm $ (Ratio.denominator . fst) <$> (toList p)
         
     squarefree = squarefree_field
+    irreducible = undefined
 
 -- instance UFD (Polynomial Double) where
 --     factor_squarefree = (\(u,lst) -> (fromRational <$> u, (fmap fromRational) <$> lst)) . factor_squarefree @(Polynomial Rational) . fmap toRational

@@ -5,6 +5,7 @@ import Polynomial.Polynomial
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Data.List as List
+import Data.Maybe (fromMaybe)
 
 main :: IO ()
 main = defaultMain tests
@@ -12,8 +13,8 @@ main = defaultMain tests
 assertFactoring :: forall r. (Show r, ED r, UFD (Polynomial r)) => (Polynomial r) -> [Polynomial r] -> Assertion
 assertFactoring p lst = assertEqual errorMessage expected actual
   where
-    actual = fmap expand . listify . factor $ p
-    expected = List.reverse $ List.sort $ expand <$> lst
+    actual = List.sort $ fmap expand . fromMaybe [] . fmap listify . factor $ p
+    expected = List.sort $ expand <$> lst
     errorMessage = "Failed to factor: " ++ show (expand p)
 
 
@@ -26,7 +27,7 @@ tests = testGroup "Tests"
 testSimpleFactor :: Assertion
 testSimpleFactor = do
     assertFactoring @Integer x [x]
-    assertFactoring @Integer (2 * x * x) [x]
+    assertFactoring @Integer (2 * x * x) [2, x]
 
 testMoreFactors :: Assertion
 testMoreFactors = do

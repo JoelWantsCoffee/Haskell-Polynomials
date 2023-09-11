@@ -102,9 +102,8 @@ instance ED r => GCDD (Polynomial r) where
     gcd_ f g    | isZero f = g
                 | isZero g = f
                 | degree g < 1 = base
-                | otherwise = if (not $ isUnit $ leadingCoeff g_)
-                    then base
-                    else base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
+                | (not $ isUnit $ leadingCoeff g_) = base
+                | otherwise = base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
                 where
                     (fc, f_) = purePart f   
                     (gc, g_) = purePart g
@@ -240,7 +239,13 @@ divide a b
                         => rx^c = 0
         
         case 2: (ax^n + f_a(x)) -> (bx^m + f_b(x)) -> ( (a/b)x^(n-m) + g() , rx^c ) for c >= d and (q,r) = ediv(a,b)
-            1.  
+            1.  ( a // b ) * x^(n - m) + ( a - )
+
+
+            (ax^n + f_a(x)) - ( a // b ) * x^(n - m) * (bx^m + f_b(x))
+                = (ax^n + f_a(x)) - (b * (a // b)) * x^n - f_a(x) * (bx^m + f_b(x))
+                = (a - (b * (a // b)) ) x^n + f_a(x) - f_a(x) * (bx^m + f_b(x))
+                = (a - (b * (a // b)) ) x^n + f_a(x) - f_a(x) * (bx^m + f_b(x))
 
 
 -}
