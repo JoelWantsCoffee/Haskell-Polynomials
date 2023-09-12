@@ -41,15 +41,18 @@ listify :: Ring r => Factoring (Polynomial r) -> [(Polynomial r)]
 listify (Factoring (_, lst)) = (expand . fst) <$> lst
 
 factor :: (ED r, UFD (Polynomial r)) => Polynomial r -> Maybe (Factoring (Polynomial r))
-factor p =
+factor p_ =
     fmap Factoring 
+    $ fmap (\(u, l) -> 
+        if isUnit lt then (expand $ lt * u, l) else (u, l ++ [(lt,1)])
+        )
     -- $ Just  
     $ (\(a,l) -> 
         if (not $ foldr (\t -> (&&) (irreducible $ fst t)) True l) then
             Nothing
         else if (isUnit a) then
             Just (a,l) 
-        else if (degree a == 0) || (irreducible a) then
+        else if (irreducible a) then
             Just (1, (a,1):l) 
         else
             Nothing
@@ -60,7 +63,10 @@ factor p =
         recover_power :: ED r => Polynomial r -> (Polynomial r, Natural) -> (Polynomial r, (Polynomial r, Natural))
         recover_power base (fact, power) = if (isZero . snd $ polyDivMod base fact) then recover_power (base /. fact) (fact, power + 1) else (base, (fact, power))
 
-        (_, factors) = factor_squarefree . snd . purePart $ squarefree p
+        lt = monomial lu 0
+
+        (_, factors) = factor_squarefree $ squarefree p
+        (lu, p) = primitivePart p_
 
         -- use primitive part instead of pure part
         -- https://wiki.haskell.org/Literate_programming

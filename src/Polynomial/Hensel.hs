@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 {-# LANGUAGE DataKinds, AllowAmbiguousTypes, ScopedTypeVariables, TypeFamilies #-}
 module Polynomial.Hensel () where
 
@@ -196,7 +197,7 @@ recombine :: forall (m :: Nat). KnownNat m
 recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
     where
         recombine_ :: Integer -> Polynomial Integer -> [Polynomial (FiniteCyclicRing m)] -> [Polynomial Integer]
-        recombine_ d u polys = if d > r then [] else ((snd . purePart) <$> out) ++ recombine_ (d + 1) u remaining
+        recombine_ d u polys = if d > r then [] else ((snd . primitivePart) <$> out) ++ recombine_ (d + 1) u remaining
             where
                 remaining = polys List.\\ (List.concat remove)
                 (remove, out) = unzip $ List.filter ( \(_, p) -> isZero . snd $ polyDivMod (lu * u) p ) vbars
@@ -222,15 +223,40 @@ funcInField :: (forall (n :: Nat) (p :: Prime n). KnownPrime p => Polynomial (Pr
 funcInField func n poly = 
     reifyPrime (fromIntegral n) $ (\(_ :: Proxy p) -> ( func $ fmap (fromInteger @(PrimeField p)) poly ))
 
+factors_from_base_prime :: Polynomial Integer -> Natural -> [Polynomial Integer]
+factors_from_base_prime poly m  | irreducible n = reifyNat n $ \(_ :: Proxy p) -> recombine poly $ lift_to @p @5 poly
+                                | otherwise = []
+                                where n = fromIntegral m
+
+factor_primitive_part :: Natural -> Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
+factor_primitive_part n p | isUnit p = (p, [])
+                    | irreducible p = (1, [p])
+                    | otherwise =
+                        ( \(poly, facts) -> append_factors facts $ factor_primitive_part (n+1) poly )
+                        $ foldr (\fact (poly, rest) -> append_factors rest (remove_powers poly fact)) (p, []) factors
+                    where
+                        remove_powers :: Polynomial Integer -> Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
+                        remove_powers base fact | (isZero . snd $ polyDivMod base fact) = (fst $ remove_powers (base /. fact) fact, [fact])
+                                                | otherwise = (base, [])
+
+                        append_factors :: [a] -> (a, [a]) -> (a,[a])
+                        append_factors l1 (a,l2) = (a, l1 ++ l2)
+
+                        factors = factors_from_base_prime p n
+
+
 instance UFD (Polynomial Integer) where
     -- factor p (mod 13), then lift to factors to (mod 13^6), then recombine
     factor_squarefree :: Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
-    factor_squarefree p = (1, recombine p $ lift_to @97 @5 p)
+    factor_squarefree p_ = (expand $ (monomial u 0) * u2, lst)
+        where
+            (u2, lst) = factor_primitive_part 7 p
+            (u, p) = primitivePart p_
 
     squarefree :: Polynomial Integer -> Polynomial Integer
     squarefree = fmap Ratio.numerator . squarefree_field . fmap (fromInteger :: Integer -> Rational)
 
-    irreducible p = (irreducible $ fromInteger @(PrimeField (AssumePrime 71)) <$> p) || (irreducible $ fromInteger @(PrimeField (AssumePrime 67)) <$> p)
+    irreducible p = ((degree p == 0) && (not $ isUnit p)) || (irreducible $ fromInteger @(PrimeField (AssumePrime 71)) <$> p) || (irreducible $ fromInteger @(PrimeField (AssumePrime 67)) <$> p)
 
 
 instance UFD (Polynomial Rational) where

@@ -13,7 +13,7 @@ module Polynomial.Polynomial
     , leadingTerm
     , polyDivMod
     , monomial
-    , purePart
+    , primitivePart
     , coeff
     ) where
 
@@ -105,8 +105,8 @@ instance ED r => GCDD (Polynomial r) where
                 | (not $ isUnit $ leadingCoeff g_) = base
                 | otherwise = base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
                 where
-                    (fc, f_) = purePart f   
-                    (gc, g_) = purePart g
+                    (fc, f_) = primitivePart f   
+                    (gc, g_) = primitivePart g
                     base = monomial (gcd_ fc gc) 0
 
 
@@ -168,8 +168,8 @@ degree = degree_ . expand
         degree_ (Product p1 p2) = degree p1 + degree p2
 
 
-purePart :: GCDD r => Polynomial r -> (r, Polynomial r)
-purePart p = (c, (flip (/.) c) <$> expand p)
+primitivePart :: GCDD r => Polynomial r -> (r, Polynomial r)
+primitivePart p = (c, (flip (/.) c) <$> expand p)
     where
         c = foldr1 gcd_ . fmap fst . toList $ p
 

@@ -9,6 +9,7 @@ pkgs.mkShell {
     pkgs.haskellPackages.matrix
     pkgs.haskellPackages.reflection
     pkgs.haskellPackages.combinatorial
+    # pkgs.haskellPackages.lhs2tex
     # pkgs.haskellPackages.hmatrix
     pkgs.git
   ];

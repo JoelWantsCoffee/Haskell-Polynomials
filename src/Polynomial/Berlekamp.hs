@@ -1,4 +1,3 @@
--- {-# LANGUAGE TypeFamilies, UndecidableInstances, AllowAmbiguousTypes #-}
 {-# LANGUAGE MonoLocalBinds #-}
 module Polynomial.Berlekamp (berlekamp) where
 
@@ -14,7 +13,7 @@ import GHC.TypeNats()
 import Data.Proxy
 
 fill :: KnownPrime p => Integer -> Integer -> Polynomial (PrimeField p) -> Matrix (PrimeField p)
-fill q n p = fromLists $ fmap ( \i -> torowvector (n - 1) $ (monomial 1 $ i * q) % p ) [1..(fromIntegral n)]
+fill q n p = fromLists $ ( \i -> torowvector (n - 1) $ (monomial 1 $ i * q) % p ) <$> [1..(fromIntegral n)]
   where
     torowvector n_ p_ = fmap (flip coeff p_) [0..n_]
 
@@ -87,13 +86,14 @@ possibleFactors p =
 --   $ possibleFactors p
 
 berlekamp :: KnownPrime p => Polynomial (PrimeField p) -> (Polynomial (PrimeField p), [ Polynomial (PrimeField p) ])
-berlekamp p = 
+berlekamp p | degree p == 0 = (p, [])
+            | otherwise = 
   (,) lc
   $ List.nub
   $ (fmap $ expand . snd . coercemonic)
   $ removeReducible
   $ List.nub
-  $ (fmap $ expand . snd . purePart)
+  $ (fmap $ expand . snd . primitivePart)
   $ possibleFactors (p // lc)
   where
     lc = (monomial (leadingCoeff p) 0)
