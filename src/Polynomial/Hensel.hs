@@ -256,7 +256,13 @@ instance UFD (Polynomial Integer) where
     squarefree :: Polynomial Integer -> Polynomial Integer
     squarefree = fmap Ratio.numerator . squarefree_field . fmap (fromInteger :: Integer -> Rational)
 
-    irreducible p = ((degree p == 0) && (not $ isUnit p)) || (irreducible $ fromInteger @(PrimeField (AssumePrime 71)) <$> p) || (irreducible $ fromInteger @(PrimeField (AssumePrime 67)) <$> p)
+    irreducible :: Polynomial Integer -> Bool
+    irreducible p
+        | squarefree p /= p = False
+        | otherwise = ( (degree p == 0) && (not $ isUnit p) ) || ( reifyPrime ( List.head [ p_ | p_ <- [(deg + 1)..], (lc `mod` p_) /= 0, irreducible p_ ] ) ( \(_ :: Proxy prime) -> irreducible $ squarefree $ fromInteger @(PrimeField prime) <$> (squarefree p) ) )
+        where 
+            deg = degree p
+            lc = leadingCoeff p
 
 
 instance UFD (Polynomial Rational) where

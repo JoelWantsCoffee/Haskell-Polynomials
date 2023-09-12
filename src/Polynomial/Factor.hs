@@ -43,11 +43,8 @@ listify (Factoring (_, lst)) = (expand . fst) <$> lst
 factor :: (ED r, UFD (Polynomial r)) => Polynomial r -> Maybe (Factoring (Polynomial r))
 factor p_ =
     fmap Factoring 
-    $ fmap (\(u, l) -> 
-        if isUnit lt then (expand $ lt * u, l) else (u, l ++ [(lt,1)])
-        )
-    -- $ Just  
-    $ (\(a,l) -> 
+    $ fmap (\(u, l) -> if isUnit lt then (expand $ lt * u, l) else (u, l ++ [(lt,1)]) )
+    $ ( \(a,l) -> 
         if (not $ foldr (\t -> (&&) (irreducible $ fst t)) True l) then
             Nothing
         else if (isUnit a) then
