@@ -8,7 +8,8 @@ randomCoefficient = getStdRandom (randomR (0, 100))
 
 -- Function to generate a term of a polynomial
 generateTerm :: Int -> IO String
-generateTerm n = do
+generateTerm n_ = do
+    n <- randomR (0, n_)
     coefficient <- randomCoefficient
     return $ show coefficient ++ "x^" ++ show n
 
@@ -47,7 +48,7 @@ createWolfram lst = do
 
 main :: IO ()
 main = do
-    lst <- sequence $ generatePolynomial <$> [2..10]
+    lst <- sequence $ generatePolynomial <$> [2..100]
     createHaskell lst
     createSage lst
     createWolfram lst
