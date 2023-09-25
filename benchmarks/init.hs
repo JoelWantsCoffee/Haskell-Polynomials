@@ -75,7 +75,7 @@ main = do
             _:"integer-mod":p:_ -> Mods (read p)
             _ -> error "domain not (correctly) specified."
             )
-    lst <- sequence $ generatePolynomial <$> (\_ -> read @Int (args!!0)) <$> [1..10] 
+    lst <- sequence $ generatePolynomial <$> (\_ -> read @Int (args!!0)) <$> [1..100]
     createHaskell dom lst
     createSage dom lst
     createWolfram dom lst

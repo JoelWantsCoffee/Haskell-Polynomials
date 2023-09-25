@@ -18,7 +18,5 @@ pkgs.mkShell {
     export LANG="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"
     export GHC_COLORS="always"
-    cabal install either matrix reflection combinatorial --lib --force-reinstalls
-    cabal repl
   '';
 }

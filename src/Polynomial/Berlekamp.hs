@@ -66,12 +66,14 @@ possibleFactors :: KnownPrime p => Polynomial (PrimeField p) -> [ Polynomial (Pr
 possibleFactors p =
   List.filter (\p_ -> not $ isUnit p_ || p_ == 0)
   $ List.nub
-  $ fmap expand
+  $ (<$>) expand
   $ List.filter ((==) 0 . (%) p)
   $ List.filter ((/=) 0)
   $ List.nub
+  $ (<$>) expand
   $ List.concatMap (findPartners p)
   $ List.nub
+  $ (<$>) expand
   $ List.concatMap (berlekampGcds p)
   -- $ fmap coerceMonic
   $ nullspaceBasis 

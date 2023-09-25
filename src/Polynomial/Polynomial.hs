@@ -18,7 +18,7 @@ module Polynomial.Polynomial
     ) where
 
 import Polynomial.Ring
-import qualified Data.Ratio as R
+-- import qualified Data.Ratio as R
 
 type Degree = Integer
 
@@ -160,13 +160,13 @@ coeff i_ p = coeff_ i_ (expand p)
         coeff_ _ _ = error "Polynomial must be simplified." 
 
 degree :: Ring r => Polynomial r -> Degree
-degree = degree_ . expand
-    where
-        degree_ :: Ring r => Polynomial r -> Degree
-        degree_ (Monomial 0 _) = 0
-        degree_ (Monomial _ deg) = deg
-        degree_ (Sum p1 p2) = max (degree p1) (degree p2)
-        degree_ (Product p1 p2) = degree p1 + degree p2
+degree = degree_expanded_unsafe . expand
+
+degree_expanded_unsafe :: Ring r => Polynomial r -> Degree
+degree_expanded_unsafe (Monomial 0 _) = 0
+degree_expanded_unsafe (Monomial _ deg) = deg
+degree_expanded_unsafe (Sum p1 p2) = max (degree p1) (degree p2)
+degree_expanded_unsafe (Product p1 p2) = degree p1 + degree p2
 
 
 primitivePart :: GCDD r => Polynomial r -> (r, Polynomial r)
@@ -201,18 +201,20 @@ differentiate (Sum a b) = (differentiate a) + (differentiate b)
 differentiate (Product a b) = ((differentiate a) * b) + (a * (differentiate b)) -- product rule
 differentiate a = differentiate $ ungroup a -- what
 
-
 divide :: Ring r => Polynomial r -> Polynomial r -> Polynomial r
-divide (Monomial c d) (Monomial c' d')
-    | d >= d' = Monomial (c /. c') (d - d')
-    | otherwise = 0
-divide a b
-    | degree a < degree b = 0
-    | q == 0 = 0
-    | otherwise = (+) q $ divide r (expand b)
+divide a_ b_ = divide_expanded_unsafe (expand a_) (expand b_)
     where
-        q = Monomial (leadingCoeff a /. leadingCoeff b) (degree a - degree b)
-        r = expand $ a - (q * b)
+        divide_expanded_unsafe :: Ring r => Polynomial r -> Polynomial r -> Polynomial r
+        divide_expanded_unsafe (Monomial c d) (Monomial c' d')
+            | d >= d' = Monomial (c /. c') (d - d')
+            | otherwise = 0
+        divide_expanded_unsafe a b
+            | degree_expanded_unsafe a < degree_expanded_unsafe b = 0
+            | q == 0 = 0
+            | otherwise = (+) q $ divide_expanded_unsafe r b
+            where
+                q = Monomial (leadingCoeff a /. leadingCoeff b) (degree_expanded_unsafe a - degree_expanded_unsafe b)
+                r = expand $ a - (q * b)
 
 {-  DEFINITION
 
@@ -251,16 +253,19 @@ divide a b
 
 -}
 polyDivMod :: ED r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
-polyDivMod a@(Monomial c d) (Monomial c' d')
-    | d < d' = (0, a)
-    | otherwise = (Monomial (c // c') (d - d'), Monomial (c % c') d)
-polyDivMod a b
-    | degree a < degree b = (0, a)
-    | q == 0 = (0, r)
-    | otherwise = (\(q', r') -> (q + q', r')) $ polyDivMod r (expand b)
+polyDivMod a_ b_ = polyDivMod_expanded_unsafe (expand a_) (expand b_)
     where
-        q = Monomial (leadingCoeff a // leadingCoeff b) (degree a - degree b)
-        r = expand $ a - (q * b)
+        polyDivMod_expanded_unsafe :: ED r => Polynomial r -> Polynomial r -> (Polynomial r, Polynomial r)
+        polyDivMod_expanded_unsafe a@(Monomial c d) (Monomial c' d')
+            | d < d' = (0, a)
+            | otherwise = (Monomial (c // c') (d - d'), Monomial (c % c') d)
+        polyDivMod_expanded_unsafe a b
+            | degree_expanded_unsafe a < degree_expanded_unsafe b = (0, a)
+            | q == 0 = (0, r)
+            | otherwise = (\(q', r') -> (expand $ q + q', r')) $ polyDivMod_expanded_unsafe r b
+            where
+                q = Monomial (leadingCoeff a // leadingCoeff b) (degree_expanded_unsafe a - degree_expanded_unsafe b)
+                r = expand $ a - (q * b)
 
 -- remove Product
 ungroup :: Ring r => Polynomial r -> Polynomial r
