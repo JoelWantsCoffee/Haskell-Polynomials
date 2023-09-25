@@ -7,15 +7,16 @@ module add /opt/modulefiles/applications/sage/9.2
 
 cd benchmarks
 
+cabal install --lib random
 runghc -package --ghc-arg=random init.hs
 
 cd ..
 
 echo "Benchmarking Mathematica..."
-(time wolfram -script test.m) 2> benchmarks/mathematica_time.txt
+(time wolfram -script benchmarks/test.m) 2> benchmarks/mathematica_time.txt
 
 echo "Benchmarking SageMath..."
-(time sage test.sage) 2> benchmarks/sagemath_time.txt
+(time sage benchmarks/test.sage) 2> benchmarks/sagemath_time.txt
 
 echo "Benchmarking Custom Program..."
 (time cabal run exe:generic-polynomials -- integer-mod 13 $(<benchmarks/test.txt)) 2> benchmarks/custom_program_time.txt
