@@ -37,7 +37,11 @@ createSage lst = do
     where
         contents = (++) "R = PolynomialRing(GF(13), 'x')\n" 
             $ foldr (++) "" 
-            $ (\p -> "R( " ++ p ++ " ).factor()\n") <$> lst
+            $ (\p -> "R( " ++ withtimes p ++ " ).factor()\n") <$> lst
+        
+        withtimes [] = []
+        withtimes ('x':t) = '*':'x':(withtimes t)
+        withtimes (h:t) = h:(withtimes t)
 
 createWolfram :: [String] -> IO ()
 createWolfram lst = do
