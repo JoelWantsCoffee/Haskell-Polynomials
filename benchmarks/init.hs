@@ -9,7 +9,7 @@ randomCoefficient = getStdRandom (randomR (0, 100))
 -- Function to generate a term of a polynomial
 generateTerm :: Int -> IO String
 generateTerm n_ = do
-    n <- randomR (0, n_)
+    n <- getStdRandom $ randomR (0, n_)
     coefficient <- randomCoefficient
     return $ show coefficient ++ "x^" ++ show n
 
