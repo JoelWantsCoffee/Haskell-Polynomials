@@ -1,6 +1,9 @@
 import System.IO
 import System.Random
+import System.Environment
 import Control.Monad (replicateM)
+
+data Domain = Ints | Rats | Mods Integer
 
 -- Function to generate a random coefficient
 randomCoefficient :: IO Int
@@ -20,22 +23,32 @@ generatePolynomial degree = do
     return $ foldr (\a b -> a ++ " + " ++ b) "0" terms
 
 
-createHaskell :: [String] -> IO ()
-createHaskell lst = 
+createHaskell :: Domain -> [String] -> IO ()
+createHaskell d lst = 
     writeFile "test.txt" contents
     where
-        contents = foldr (++) ""  
-            $ (flip (++) " " . noSpaces) <$> lst
+        contents = (++) (
+                case d of
+                    Mods n -> "integer-mod\n" ++ show n ++ "\n"
+                    Rats -> "rational\n"
+                    Ints -> "integer\n"
+                )
+            $ foldr (++) ""  
+            $ (flip (++) "\n" . noSpaces) <$> lst
 
         noSpaces [] = []
         noSpaces (' ':t) = noSpaces t
         noSpaces (h:t) = h:(noSpaces t)
 
-createSage :: [String] -> IO ()
-createSage lst = do
+createSage :: Domain -> [String] -> IO ()
+createSage d lst = do
     writeFile "test.sage" contents
     where
-        contents = (++) "R = PolynomialRing(GF(13), 'x')\n" 
+        contents = (++) ("R = PolynomialRing( " ++ (case d of
+            Mods n -> "GF(" ++ show n ++ ")"
+            Ints -> "ZZ"
+            Rats -> "QQ"
+            ) ++ " , 'x')\n") 
             $ foldr (++) "" 
             $ (\p -> "R( " ++ withtimes p ++ " ).factor()\n") <$> lst
         
@@ -43,16 +56,26 @@ createSage lst = do
         withtimes ('x':t) = '*':'x':(withtimes t)
         withtimes (h:t) = h:(withtimes t)
 
-createWolfram :: [String] -> IO ()
-createWolfram lst = do
+createWolfram :: Domain -> [String] -> IO ()
+createWolfram d lst = do
     writeFile "test.m" contents
     where
         contents = foldr (++) "" 
-            $ (\p -> "Factor[ " ++ p ++ " , Modulus -> 13]\n") <$> lst
+            $ (\p -> "Factor[ " ++ p ++ (case d of
+                    Mods n -> " , Modulus -> " ++ show n
+                    _ -> " "
+                ) ++ "]\n") <$> lst
 
 main :: IO ()
 main = do
-    lst <- sequence $ generatePolynomial <$> [1..10]
-    createHaskell lst
-    createSage lst
-    createWolfram lst
+    args <- getArgs
+    let dom = ( case args of 
+            _:"rational":_ -> Rats
+            _:"integer":_ -> Ints
+            _:"integer-mod":p:_ -> Mods (read p)
+            _ -> error "domain not (correctly) specified."
+            )
+    lst <- sequence $ generatePolynomial <$> (\_ -> read @Int (args!!0)) <$> [1..10] 
+    createHaskell dom lst
+    createSage dom lst
+    createWolfram dom lst

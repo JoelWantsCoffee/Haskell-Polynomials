@@ -5,6 +5,8 @@ import Polynomial.Factor
 import Text.Read (readMaybe)
 import Data.Proxy
 
+instance Ring Double
+
 data Token r = Coeff r | Var | Exp Integer | Plus deriving (Show, Eq)
 
 -- The lexer function breaks the input string into Tokens.
@@ -33,10 +35,12 @@ parsePoly = parse . lexer
 
 main :: IO ()
 main = do
-  args <- getArgs
+  args_ <- getArgs
+  args <- if (length args_ > 1) then pure args_ else ( lines <$> readFile (args_ !! 0) )
+
   case args of 
     "rational":t ->
-      putStrLn . show $ (factor . parsePoly @Rational) <$> t
+      putStrLn . show $ (factor . fmap toRational . parsePoly @Double) <$> t
     "integer":t ->
       putStrLn . show $ (factor . parsePoly @Integer) <$> t
     "integer-mod":p:t ->

@@ -68,6 +68,7 @@ possibleFactors p =
   $ List.nub
   $ fmap expand
   $ List.filter ((==) 0 . (%) p)
+  $ List.filter ((/=) 0)
   $ List.nub
   $ List.concatMap (findPartners p)
   $ List.nub

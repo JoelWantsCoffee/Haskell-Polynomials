@@ -8,7 +8,6 @@ import Polynomial.Squarefree
 import Polynomial.Berlekamp()
 
 import Data.Proxy
-import Data.FiniteField.PrimeField qualified as PrimeField
 import GHC.TypeNats
 import Data.Reflection
 import Data.List qualified as List
@@ -45,7 +44,7 @@ lift2 :: forall (pk1 :: Nat). KnownNat pk1
     -> (Polynomial Integer, Polynomial Integer)
     -> (Polynomial Integer, Polynomial Integer)
     -> (Polynomial Integer, Polynomial Integer)
-lift2 f lu (a,b) (g,h) = ( expand $ toIntegerNormal <$> (fromInteger <$> g) + beta*d, expand $ PrimeField.toInteger <$> (fromInteger <$> h) + beta*c )
+lift2 f lu (a,b) (g,h) = ( expand $ toIntegerNormal <$> (fromInteger <$> g) + beta*d, expand $ euclidean <$> (fromInteger <$> h) + beta*c )
     where
         -- beta = ( 1 - gamma ) // alpha
         beta :: Polynomial (FiniteCyclicRing pk1)
@@ -180,14 +179,11 @@ factorize_linear p = recombine p $ liftN @13 @6 p
 toIntegerNormal :: forall (n :: Nat). KnownNat n => FiniteCyclicRing n -> Integer
 toIntegerNormal c_ = if c < ( p `div` 2) then c else c - p
     where
-        c = (PrimeField.toInteger c_) `mod` p
+        c = (euclidean c_) `mod` p
         p = fromIntegral $ natVal (Proxy :: Proxy n)
 
 toIntegerNormal' :: forall (n :: Nat) (p :: Prime n). KnownPrime p => PrimeField p -> Integer
-toIntegerNormal' c_ = if c < ( p `div` 2) then c else c - p
-    where
-        c = (PrimeField.toInteger $ toFiniteCyclicRing c_) `mod` p
-        p = fromIntegral $ primeVal (Proxy :: Proxy p)
+toIntegerNormal' c = toIntegerNormal $ toFiniteCyclicRing @n c
 
 -- The-art-of-computer-programming.-Vol.2.-Seminumerical-algorithms-by-Knuth-Donald PAGE 452 F2
 recombine :: forall (m :: Nat). KnownNat m 
@@ -261,8 +257,8 @@ instance UFD (Polynomial Integer) where
         | squarefree p /= p = False
         | otherwise = ( (degree p == 0) && (not $ isUnit p) ) || ( isIrreducibleMod prime1 )
         where 
-            isIrreducibleMod primen = reifyPrime primen ( \(_ :: Proxy prime) -> foldr (&&) True $ fmap (\a -> (a == 1) || (a == p) ) $ fmap (gcd_ p) $ (\_ -> []) $ error . show $ fmap (fmap toIntegerNormal') $ snd $ factor_squarefree $ squarefree $ fromInteger @(PrimeField prime) <$> (squarefree p) )
-            prime1 = ( List.head [ p_ | p_ <- [(deg + 1)..], (lc `mod` p_) /= 0, irreducible p_ ] )
+            isIrreducibleMod primen = reifyPrime primen ( \(_ :: Proxy prime) -> foldr (&&) True $ fmap (\a -> (a == 1) || (a == p) ) $ fmap (gcd_ p) $ fmap (fmap toIntegerNormal') $ snd $ factor_squarefree $ squarefree $ fromInteger @(PrimeField prime) <$> (squarefree p) )
+            prime1 = ( List.head [ p_ | p_ <- [(max (deg + 1) 5)..], (lc `mod` p_) /= 0, irreducible p_ ] )
 
             deg = degree p
             lc = leadingCoeff p

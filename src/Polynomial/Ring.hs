@@ -24,7 +24,7 @@ module Polynomial.Ring
     , toFiniteCyclicRing
     ) where
 
-import Data.FiniteField.PrimeField qualified as PF
+import qualified Data.Mod as M
 import GHC.TypeNats
 import Data.Reflection
 import Data.Proxy
@@ -195,7 +195,7 @@ instance Field Rational
 
 -- INTEGER QUOTIENT RINGS 
 
-type FiniteCyclicRing (n :: Nat) = PF.PrimeField n
+type FiniteCyclicRing (n :: Nat) = M.Mod n
 
 {-  PROOFS
 
@@ -204,7 +204,11 @@ type FiniteCyclicRing (n :: Nat) = PF.PrimeField n
 -}
 instance KnownNat p => Ring (FiniteCyclicRing p) where
     (/.) = (/)
-    isUnit = (/=) 0
+    isUnit = isJust . M.invertMod
+        where
+            isJust :: Maybe a -> Bool
+            isJust (Just _) = True
+            isJust Nothing  = False
 
 {-  PROOFS
 
@@ -224,9 +228,9 @@ instance KnownNat p => ED (FiniteCyclicRing p) where
     (//) = (/)
     (%) 0 _ = 0
     (%) a b 
-        | gcd (fromIntegral $ natVal (Proxy :: Proxy p)) (PF.toInteger b) == 1 = 0
+        | gcd (fromIntegral $ natVal (Proxy :: Proxy p)) (euclidean b) == 1 = 0
         | otherwise = a - b * (a // b)
-    euclidean = PF.toInteger
+    euclidean = fromIntegral . M.unMod
 
 {-  PROOFS
 

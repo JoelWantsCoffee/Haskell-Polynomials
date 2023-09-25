@@ -61,7 +61,7 @@ common warnings
         ghc-typelits-knownnat,
         combinatorial,
         either,
-        finite-field,
+        mod,
         matrix,
         reflection
 
@@ -80,9 +80,11 @@ library
         Polynomial.Ring,
         Polynomial.Squarefree
 
+    default-extensions:
+        DataKinds
+
     -- LANGUAGE extensions used by modules in this package.
     other-extensions:
-        DataKinds, 
         AllowAmbiguousTypes, 
         ScopedTypeVariables, 
         TypeFamilies, 
