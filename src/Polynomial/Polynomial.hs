@@ -83,24 +83,25 @@ instance (Ord r, Ring r) => Ord (Polynomial r) where
         else compare (degree p1) (degree p2)
 
 
-instance Ring (Polynomial r) => Eq (Polynomial r) where
+instance Ring r => Eq (Polynomial r) where
     (==) x y = isZero (x - y)
+        where
+            isZero p = isZero_ $ expand p
+            
+            isZero_ (Sum a b) = (isZero_ a) && (isZero_ b)
+            isZero_ (Monomial a _) = a == 0
+            isZero_ (Product a b) = (isZero_ a) || (isZero_ b)
 
 
 instance Ring r => Ring (Polynomial r) where
     (/.) a = expand . divide a
     isUnit p = (degree p == 0) && (isUnit $ leadingCoeff p)
-    isZero p = isZero_ $ expand p
-        where
-            isZero_ (Sum a b) = (isZero_ a) && (isZero_ b)
-            isZero_ (Monomial a _) = isZero a
-            isZero_ (Product a b) = (isZero_ a) || (isZero_ b)
 
 
 instance ED r => GCDD (Polynomial r) where
     gcd_ :: ED r => Polynomial r -> Polynomial r -> Polynomial r
-    gcd_ f g    | isZero f = g
-                | isZero g = f
+    gcd_ f g    | f == 0 = g
+                | g == 0 = f
                 | degree g < 1 = base
                 | (not $ isUnit $ leadingCoeff g_) = base
                 | otherwise = base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
@@ -207,7 +208,7 @@ divide (Monomial c d) (Monomial c' d')
     | otherwise = 0
 divide a b
     | degree a < degree b = 0
-    | isZero q = 0
+    | q == 0 = 0
     | otherwise = (+) q $ divide r (expand b)
     where
         q = Monomial (leadingCoeff a /. leadingCoeff b) (degree a - degree b)
@@ -255,7 +256,7 @@ polyDivMod a@(Monomial c d) (Monomial c' d')
     | otherwise = (Monomial (c // c') (d - d'), Monomial (c % c') d)
 polyDivMod a b
     | degree a < degree b = (0, a)
-    | isZero q = (0, r)
+    | q == 0 = (0, r)
     | otherwise = (\(q', r') -> (q + q', r')) $ polyDivMod r (expand b)
     where
         q = Monomial (leadingCoeff a // leadingCoeff b) (degree a - degree b)

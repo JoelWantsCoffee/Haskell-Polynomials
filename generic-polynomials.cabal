@@ -54,7 +54,9 @@ extra-doc-files:    CHANGELOG.md Readme.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall -O3
+    ghc-options:    -O2
+                    -Wall 
+                    -threaded 
     build-depends:
         ghc-typelits-knownnat,
         combinatorial,

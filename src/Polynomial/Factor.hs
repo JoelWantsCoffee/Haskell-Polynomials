@@ -10,10 +10,13 @@ module Polynomial.Factor
     , KnownPrime
     , PrimeField
     , FiniteCyclicRing
+    , Polynomial
+    , reifyPrime
     , primeVal
     , factor
     , listify
     , unfactor
+    , monomial
     , x
     )
 where
@@ -54,11 +57,11 @@ factor p_ =
         else
             Nothing
       )
-    $ (\(u,lst) -> (u, List.reverse $ List.sort $ List.filter ((<) 0 . snd) lst))
+    $ (\(u,lst) -> (u, List.filter ((<) 0 . snd) lst))
     $ foldr (\fact (rest, lst) -> (\(r,l) -> (expand r, l:lst)) $ recover_power rest (fact, 0)) (p, []) factors
     where
         recover_power :: ED r => Polynomial r -> (Polynomial r, Natural) -> (Polynomial r, (Polynomial r, Natural))
-        recover_power base (fact, power) = if (isZero . snd $ polyDivMod base fact) then recover_power (base /. fact) (fact, power + 1) else (base, (fact, power))
+        recover_power base (fact, power) = if ((==) 0 . snd $ polyDivMod base fact) then recover_power (base /. fact) (fact, power + 1) else (base, (fact, power))
 
         lt = monomial lu 0
 

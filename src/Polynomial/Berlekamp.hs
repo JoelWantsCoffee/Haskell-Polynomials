@@ -54,7 +54,7 @@ removeReducible = removeReducible_ []
     reduce :: KnownPrime p => [ Polynomial (PrimeField p) ] -> Polynomial (PrimeField p) -> Polynomial (PrimeField p)
     reduce [] p = p
     reduce (h:t) p  | (h == p) = reduce t p
-                    | (isZero $ p % h) && (not . isUnit $ h // p) = reduce (h:t) (p // h)
+                    | ((==) 0 $ p % h) && (not . isUnit $ h // p) = reduce (h:t) (p // h)
                     | otherwise = reduce t p
 
 -- removeReducible lst = List.filter ( \p -> (==) Nothing $ List.find (\p2 -> (p2 /= p) && (isZero $ p % p2) && (not . isUnit $ p2 // p)) lst ) lst
@@ -64,10 +64,10 @@ findPartners p f = (:) f $ fmap (\n -> p // (f ^ n)) [1..(degree p - degree f)]
 
 possibleFactors :: KnownPrime p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
 possibleFactors p =
-  List.filter (\p_ -> not $ isUnit p_ || isZero p_)
+  List.filter (\p_ -> not $ isUnit p_ || p_ == 0)
   $ List.nub
   $ fmap expand
-  $ List.filter (isZero . (%) p)
+  $ List.filter ((==) 0 . (%) p)
   $ List.nub
   $ List.concatMap (findPartners p)
   $ List.nub

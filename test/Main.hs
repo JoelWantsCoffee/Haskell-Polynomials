@@ -10,7 +10,7 @@ import Data.Maybe (fromMaybe)
 main :: IO ()
 main = defaultMain tests
 
-assertFactoring :: forall r. (Show r, ED r, UFD (Polynomial r)) => (Polynomial r) -> [Polynomial r] -> Assertion
+assertFactoring :: forall r. (Show r, Ord r, ED r, UFD (Polynomial r)) => (Polynomial r) -> [Polynomial r] -> Assertion
 assertFactoring p lst = assertEqual errorMessage expected actual
   where
     actual = List.sort $ fmap expand . fromMaybe [] . fmap listify . factor $ p

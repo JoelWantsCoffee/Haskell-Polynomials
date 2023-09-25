@@ -1,1 +1,7 @@
 dist-newstyle/
+custom_program_time.txt
+mathematica_time.txt
+sagemath_time.txt
+benchmarks/test.m
+benchmarks/test.sage
+benchmarks/test.txt

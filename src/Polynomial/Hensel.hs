@@ -17,7 +17,7 @@ import Combinatorics qualified as Combinatorics
 
 -- x,y returns (c,a,b) such that ax + by = c = gcd(x,y)
 extendedGcd :: ED r => r -> r -> (r, r, r)
-extendedGcd a b | isZero b  = (a, 1, 0)
+extendedGcd a b | b == 0    = (a, 1, 0)
                 | otherwise = 
                     let (q, r) = div_ a b
                         (d, x, y) = extendedGcd b r
@@ -200,7 +200,7 @@ recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
         recombine_ d u polys = if d > r then [] else ((snd . primitivePart) <$> out) ++ recombine_ (d + 1) u remaining
             where
                 remaining = polys List.\\ (List.concat remove)
-                (remove, out) = unzip $ List.filter ( \(_, p) -> isZero . snd $ polyDivMod (lu * u) p ) vbars
+                (remove, out) = unzip $ List.filter ( \(_, p) -> (==) 0 . snd $ polyDivMod (lu * u) p ) vbars
                 vbars = (\lst_ -> (lst_, fmap toIntegerNormal $ expand $ (*) (fromInteger <$> lu) $ foldr1 (*) lst_)) <$> choices
                 choices = Combinatorics.tuples (fromInteger d) polys
                 r :: Integer
@@ -236,7 +236,7 @@ factor_primitive_part n p | isUnit p = (p, [])
                         $ foldr (\fact (poly, rest) -> append_factors rest (remove_powers poly fact)) (p, []) factors
                     where
                         remove_powers :: Polynomial Integer -> Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
-                        remove_powers base fact | (isZero . snd $ polyDivMod base fact) = (fst $ remove_powers (base /. fact) fact, [fact])
+                        remove_powers base fact | ((==) 0 . snd $ polyDivMod base fact) = (fst $ remove_powers (base /. fact) fact, [fact])
                                                 | otherwise = (base, [])
 
                         append_factors :: [a] -> (a, [a]) -> (a,[a])
@@ -254,13 +254,16 @@ instance UFD (Polynomial Integer) where
             (u, p) = primitivePart p_
 
     squarefree :: Polynomial Integer -> Polynomial Integer
-    squarefree = fmap Ratio.numerator . squarefree_field . fmap (fromInteger :: Integer -> Rational)
+    squarefree = squarefree_field
 
     irreducible :: Polynomial Integer -> Bool
     irreducible p
         | squarefree p /= p = False
-        | otherwise = ( (degree p == 0) && (not $ isUnit p) ) || ( reifyPrime ( List.head [ p_ | p_ <- [(deg + 1)..], (lc `mod` p_) /= 0, irreducible p_ ] ) ( \(_ :: Proxy prime) -> irreducible $ squarefree $ fromInteger @(PrimeField prime) <$> (squarefree p) ) )
+        | otherwise = ( (degree p == 0) && (not $ isUnit p) ) || ( isIrreducibleMod prime1 )
         where 
+            isIrreducibleMod primen = reifyPrime primen ( \(_ :: Proxy prime) -> foldr (&&) True $ fmap (\a -> (a == 1) || (a == p) ) $ fmap (gcd_ p) $ (\_ -> []) $ error . show $ fmap (fmap toIntegerNormal') $ snd $ factor_squarefree $ squarefree $ fromInteger @(PrimeField prime) <$> (squarefree p) )
+            prime1 = ( List.head [ p_ | p_ <- [(deg + 1)..], (lc `mod` p_) /= 0, irreducible p_ ] )
+
             deg = degree p
             lc = leadingCoeff p
 

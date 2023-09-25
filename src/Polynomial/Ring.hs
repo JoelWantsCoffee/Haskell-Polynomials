@@ -29,9 +29,6 @@ import GHC.TypeNats
 import Data.Reflection
 import Data.Proxy
 
-type NonZero a = a
-
-
 
 {-  DEFINITIONS
 
@@ -48,10 +45,9 @@ type NonZero a = a
         otherwise returns false
     
 -}
-class (Num a, Ord a, Eq a) => Ring a where
-    (/.) :: a -> NonZero a -> a 
+class (Num a, Eq a) => Ring a where
+    (/.) :: a -> a -> a 
     isUnit :: a -> Bool
-    isZero :: a -> Bool
 
 {-  DEFINITIONS
 
@@ -116,7 +112,6 @@ instance Ring Integer where
     isUnit 1 = True
     isUnit (-1) = True
     isUnit _ = False
-    isZero = (==) 0
 
 {-  PROOFS
 
@@ -134,7 +129,7 @@ instance GCDD Integer where
 instance UFD Integer where
     factor_squarefree = undefined
     squarefree = undefined
-    irreducible i   | isZero i  = False
+    irreducible i   | i == 0    = False
                     | isUnit i  = False
                     | i > 1     = null [ x | x <- [2 .. floor (sqrt (fromIntegral i :: Double))], i `mod` x == 0 ]
                     | otherwise = irreducible (-i)
@@ -160,7 +155,6 @@ instance ED Integer where
 instance Ring Rational where
     (/.) = (/)
     isUnit = (/=) 0
-    isZero = (==) 0
 
 
 {-  PROOFS
@@ -211,7 +205,6 @@ type FiniteCyclicRing (n :: Nat) = PF.PrimeField n
 instance KnownNat p => Ring (FiniteCyclicRing p) where
     (/.) = (/)
     isUnit = (/=) 0
-    isZero = (==) 0
 
 {-  PROOFS
 
