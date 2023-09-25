@@ -48,7 +48,7 @@ createWolfram lst = do
 
 main :: IO ()
 main = do
-    lst <- sequence $ generatePolynomial <$> [2..100]
+    lst <- sequence $ generatePolynomial <$> [1..10]
     createHaskell lst
     createSage lst
     createWolfram lst
