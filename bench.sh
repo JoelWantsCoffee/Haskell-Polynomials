@@ -22,7 +22,7 @@ cabal install --lib random
 # cat benchmarks/custom_program_time.txt
 
 time_command () {
-    echo $1 >> benchmarks/out.txt
+    echo benchmark: $1 >> benchmarks/out.txt
     echo $( (time -p ($1 2>&1)) 2>&1 1>>benchmarks/out.txt | head -n 1 | cut -d' ' -f2 )
 }
 
@@ -34,7 +34,7 @@ log_times () {
 }
 
 # (time -p (cabal run exe:generic-polynomials -- benchmarks/test.txt 2>&1)) 2>&1 1>out.txt | head -n 1 | cut -d' ' -f2
-echo benchmarkign script started... > benchmarks/out.txt
+echo benchmark: started... > benchmarks/out.txt
 echo degree, Mathematica, SageMath, Haskell-Polynomials | tee benchmarks/results.csv
 i=2
 while [ $i -ne 11 ]
