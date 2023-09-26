@@ -5,3 +5,5 @@ sagemath_time.txt
 benchmarks/test.m
 benchmarks/test.sage
 benchmarks/test.txt
+benchmarks/out.txt
+benchmarks/results.csv
