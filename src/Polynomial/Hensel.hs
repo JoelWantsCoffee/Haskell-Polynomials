@@ -232,7 +232,7 @@ factor_primitive_part n p | isUnit p = (p, [])
                         $ foldr (\fact (poly, rest) -> append_factors rest (remove_powers poly fact)) (p, []) factors
                     where
                         remove_powers :: Polynomial Integer -> Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
-                        remove_powers base fact | ((==) 0 . snd $ polyDivMod base fact) = (fst $ remove_powers (base /. fact) fact, [fact])
+                        remove_powers base fact | ((==) 0 . snd $ polyDivMod base fact) = (fst $ remove_powers (base `divide` fact) fact, [fact])
                                                 | otherwise = (base, [])
 
                         append_factors :: [a] -> (a, [a]) -> (a,[a])

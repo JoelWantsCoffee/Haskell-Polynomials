@@ -15,6 +15,7 @@ module Polynomial.Polynomial
     , monomial
     , primitivePart
     , coeff
+    , divide
     ) where
 
 import Polynomial.Ring
@@ -94,7 +95,6 @@ instance Ring r => Eq (Polynomial r) where
 
 
 instance Ring r => Ring (Polynomial r) where
-    (/.) a = expand . divide a
     isUnit p = (degree p == 0) && (isUnit $ leadingCoeff p)
 
 
@@ -169,8 +169,8 @@ degree_expanded_unsafe (Sum p1 p2) = max (degree p1) (degree p2)
 degree_expanded_unsafe (Product p1 p2) = degree p1 + degree p2
 
 
-primitivePart :: GCDD r => Polynomial r -> (r, Polynomial r)
-primitivePart p = (c, (flip (/.) c) <$> expand p)
+primitivePart :: ED r => Polynomial r -> (r, Polynomial r)
+primitivePart p = (c, (flip (//) c) <$> expand p)
     where
         c = foldr1 gcd_ . fmap fst . toList $ p
 
@@ -201,19 +201,19 @@ differentiate (Sum a b) = (differentiate a) + (differentiate b)
 differentiate (Product a b) = ((differentiate a) * b) + (a * (differentiate b)) -- product rule
 differentiate a = differentiate $ ungroup a -- what
 
-divide :: Ring r => Polynomial r -> Polynomial r -> Polynomial r
+divide :: ED r => Polynomial r -> Polynomial r -> Polynomial r
 divide a_ b_ = divide_expanded_unsafe (expand a_) (expand b_)
     where
-        divide_expanded_unsafe :: Ring r => Polynomial r -> Polynomial r -> Polynomial r
+        divide_expanded_unsafe :: ED r => Polynomial r -> Polynomial r -> Polynomial r
         divide_expanded_unsafe (Monomial c d) (Monomial c' d')
-            | d >= d' = Monomial (c /. c') (d - d')
+            | d >= d' = Monomial (c // c') (d - d')
             | otherwise = 0
         divide_expanded_unsafe a b
             | degree_expanded_unsafe a < degree_expanded_unsafe b = 0
             | q == 0 = 0
             | otherwise = (+) q $ divide_expanded_unsafe r b
             where
-                q = Monomial (leadingCoeff a /. leadingCoeff b) (degree_expanded_unsafe a - degree_expanded_unsafe b)
+                q = Monomial (leadingCoeff a // leadingCoeff b) (degree_expanded_unsafe a - degree_expanded_unsafe b)
                 r = expand $ a - (q * b)
 
 {-  DEFINITION

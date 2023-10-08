@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MonoLocalBinds #-}
@@ -32,10 +33,6 @@ import Data.Proxy
 
 {-  DEFINITIONS
 
-    (/.) : a -> b -> q
-        such that a = q * b, if such a q exists,
-        otherwise behaviour is undefined
-
     (isUnit) : a -> Bool
         returns true if some a^(-1) exists such
         that a * a^(-1) = 1. Otherwise returns false
@@ -46,7 +43,6 @@ import Data.Proxy
     
 -}
 class (Num a, Eq a) => Ring a where
-    (/.) :: a -> a -> a
     isUnit :: a -> Bool
 
 {-  DEFINITIONS
@@ -87,7 +83,6 @@ class GCDD a => UFD a where
 -}
 class GCDD a => ED a where
     (//) :: a -> a -> a
-    (//) = (/.)
     (%) :: a -> a -> a
     euclidean :: a -> Integer
     div_ :: a -> a -> (a,a)
@@ -109,7 +104,6 @@ class ED a => Field a where
 
 -}
 instance Ring Integer where
-    (/.) a b = (\(q,r) -> if r == 0 then q else 0) $ divMod a b
     isUnit 1 = True
     isUnit (-1) = True
     isUnit _ = False
@@ -154,7 +148,6 @@ instance ED Integer where
     
 -}
 instance Ring Rational where
-    (/.) = (/)
     isUnit = (/=) 0
 
 
@@ -172,6 +165,7 @@ instance GCDD Rational where
     
 -}
 instance ED Rational where
+    (//) = (/)
     (%) 0 b = b
     (%) _ _ = 0
     euclidean _ = 0
@@ -204,7 +198,6 @@ type FiniteCyclicRing (n :: Nat) = M.Mod n
     
 -}
 instance KnownNat p => Ring (FiniteCyclicRing p) where
-    (/.) = (/)
     isUnit = isJust . M.invertMod
         where
             isJust :: Maybe a -> Bool
@@ -276,8 +269,116 @@ assumePrime :: forall (n :: Nat) (p :: Prime n) . (KnownNat n, KnownPrime p) => 
 assumePrime Proxy = Proxy
 
 instance KnownPrime p => ED (PrimeField p) where
+    (//) = (/)
     (%) 0 b = b
     (%) _ _ = 0
     euclidean _ = 0
 
 instance KnownPrime p => Field (PrimeField p)
+
+
+-- monoid rings
+
+data MonoidRing m r where
+    Monomial :: (Monoid m, Ring r) => r -> m -> MonoidRing m r
+    Sum :: (Monoid m, Ring r) => MonoidRing m r -> MonoidRing m r -> MonoidRing m r
+    Product :: (Monoid m, Ring r) => MonoidRing m r -> MonoidRing m r -> MonoidRing m r
+
+
+instance Semigroup Natural where
+    (<>) = (+)
+
+instance Monoid Natural where
+    mempty = 0
+
+-- remove Product
+ungroup :: (Monoid m, Ring r) => MonoidRing m r -> MonoidRing m r
+ungroup (Monomial c d) = Monomial c d
+ungroup (Sum f g) = Sum (ungroup f) (ungroup g)
+ungroup (Product (Monomial c0 d0) (Monomial c1 d1)) = Monomial (c0 * c1) (d0 <> d1)
+ungroup (Product (Sum f g) h) = Sum (ungroup $ Product f h) (ungroup $ Product g h)
+ungroup (Product f (Sum g h)) = Sum (ungroup $ Product f g) (ungroup $ Product f h)
+ungroup (Product f g) = ungroup $ Product (ungroup f) (ungroup g)
+
+-- reduce to only Sum and Monomial constructors
+setThemUp :: (Monoid m, Ring r) => MonoidRing m r -> MonoidRing m r
+setThemUp (Monomial c d) = Monomial c d
+setThemUp (Sum (Monomial c d) b) = Sum (Monomial c d) (setThemUp b)
+setThemUp (Sum (Sum a b) c) = setThemUp $ Sum a (Sum b c)
+setThemUp a = setThemUp $ ungroup a
+
+-- sort Sum and Monomial constructors, returns a only-right-recursive tree
+sortThemOut :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> MonoidRing m r
+sortThemOut (Monomial c_ d) = Monomial c_ d
+sortThemOut (Sum (Monomial c_ d_) t) = Sum big $ sortThemOut rest
+        where 
+            (big, rest) = findBig (Monomial c_ d_) t id
+            findBig :: (Ord m, Monoid m, Ring r)
+                => MonoidRing m r 
+                -> MonoidRing m r 
+                -> (MonoidRing m r -> MonoidRing m r)
+                -> (MonoidRing m r, MonoidRing m r)
+            findBig (Monomial maxc maxd) (Monomial c d) f
+                | d > maxd  = (Monomial c d, f $ Monomial maxc maxd)
+                | otherwise = (Monomial maxc maxd, f $ Monomial c d)
+            findBig (Monomial maxc maxd) (Sum (Monomial c d) next) f
+                | d > maxd  = findBig (Monomial c d) next ((.) f $ Sum (Monomial maxc maxd))
+                | otherwise = findBig (Monomial maxc maxd) next ((.) f $ Sum (Monomial c d))
+            findBig b n f = findBig b (setThemUp n) f
+sortThemOut a = sortThemOut $ setThemUp a
+
+-- remove duplicate power monomials
+knockThemDown :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> MonoidRing m r
+knockThemDown (Monomial c d) = Monomial c d
+knockThemDown (Sum (Monomial 0 _) a) = knockThemDown a
+knockThemDown (Sum a (Monomial 0 _)) = knockThemDown a
+knockThemDown (Sum (Monomial c d) (Sum (Monomial c' d') t))
+    | d == d' = knockThemDown $ Sum (Monomial (c + c') d) t
+    | otherwise = Sum (Monomial c d) $ knockThemDown (Sum (Monomial c' d') t)
+knockThemDown (Sum (Monomial c d) (Monomial c' d'))
+    | d == d' = Monomial (c + c') d
+    | otherwise = Sum (Monomial c d) (Monomial c' d')
+knockThemDown a = knockThemDown $ sortThemOut a
+
+-- convert to an only-right-recursive tree where each monomial degree appears at most once 
+expand :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> MonoidRing m r
+expand = knockThemDown . sortThemOut . setThemUp
+
+instance (Ord m, Monoid m, Ring r) => Num (MonoidRing m r) where
+    (+) = Sum
+    (*) = Product
+    abs = id
+    signum _ = Monomial 1 mempty
+    negate = (*) (Monomial (-1) mempty)
+    fromInteger i = Monomial (fromInteger i) mempty
+
+instance (Ord m, Monoid m, Ring r) => Ring (MonoidRing m r) where
+    isUnit p = isUnit_ $ expand p
+        where
+            isUnit_ (Monomial c mempty) = isUnit c
+            isUnit_ _ = False
+
+degree :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> m
+degree = degree_expanded_unsafe . expand
+    where
+        degree_expanded_unsafe :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> m
+        degree_expanded_unsafe (Monomial 0 _) = mempty
+        degree_expanded_unsafe (Monomial _ deg) = deg
+        degree_expanded_unsafe (Sum p1 p2) = max (degree p1) (degree p2)
+        degree_expanded_unsafe (Product p1 p2) = degree p1 <> degree p2
+
+leadingCoeff :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> r
+leadingCoeff = leadingCoeff_ . expand
+    where
+        leadingCoeff_ :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> r
+        leadingCoeff_ (Monomial c _) = c 
+        leadingCoeff_ (Product a b) = error "what"
+        leadingCoeff_ (Sum a b) = leadingCoeff_ a
+
+instance (Ord m, Monoid m, Ring r) => Eq (MonoidRing m r) where
+    (==) x y = isZero (x - y)
+        where
+            isZero p = isZero_ $ expand p
+            isZero_ (Sum a b) = (isZero_ a) && (isZero_ b)
+            isZero_ (Monomial a _) = a == 0
+            isZero_ (Product a b) = (isZero_ a) || (isZero_ b)

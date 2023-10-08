@@ -61,7 +61,7 @@ factor p_ =
     $ foldr (\fact (rest, lst) -> (\(r,l) -> (expand r, l:lst)) $ recover_power rest (fact, 0)) (p, []) factors
     where
         recover_power :: ED r => Polynomial r -> (Polynomial r, Natural) -> (Polynomial r, (Polynomial r, Natural))
-        recover_power base (fact, power) = if ((==) 0 . snd $ polyDivMod base fact) then recover_power (base /. fact) (fact, power + 1) else (base, (fact, power))
+        recover_power base (fact, power) = if ((==) 0 . snd $ polyDivMod base fact) then recover_power (base `divide` fact) (fact, power + 1) else (base, (fact, power))
 
         lt = monomial lu 0
 
