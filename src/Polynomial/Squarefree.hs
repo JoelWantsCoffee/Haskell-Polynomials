@@ -8,7 +8,7 @@ import Polynomial.Polynomial
 import Polynomial.Ring
 
             
-yun :: ED r => Integer -> Polynomial r -> Polynomial r -> [(Polynomial r, Integer)]
+yun :: (GCDD r, ED r) => Integer -> Polynomial r -> Polynomial r -> [(Polynomial r, Integer)]
 yun i b d
     | degree b == 0 = [(b, i)]
     | otherwise = let
@@ -25,10 +25,10 @@ yun i b d
 forgetPowers :: Ring r => [(Polynomial r, Integer)] -> Polynomial r
 forgetPowers = foldr (\(a, _) b -> a * b) (monomial 1 0)
 
-squarefree_field :: ED r => Polynomial r -> Polynomial r
+squarefree_field :: (GCDD r, ED r) => Polynomial r -> Polynomial r
 squarefree_field = forgetPowers . decompose
 
-decompose :: ED r => Polynomial r -> [(Polynomial r, Integer)]
+decompose :: (GCDD r, ED r) => Polynomial r -> [(Polynomial r, Integer)]
 decompose f
     | degree f == 0 = []
     | otherwise    = yun 1 b $ (f' `divide` a0) - (differentiate b)

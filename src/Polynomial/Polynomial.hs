@@ -98,7 +98,7 @@ instance Ring r => Ring (Polynomial r) where
     isUnit p = (degree p == 0) && (isUnit $ leadingCoeff p)
 
 
-instance ED r => GCDD (Polynomial r) where
+instance (GCDD r, ED r) => GCDD (Polynomial r) where
     gcd_ :: ED r => Polynomial r -> Polynomial r -> Polynomial r
     gcd_ f g    | f == 0 = g
                 | g == 0 = f
@@ -111,7 +111,7 @@ instance ED r => GCDD (Polynomial r) where
                     base = monomial (gcd_ fc gc) 0
 
 
-instance Field r => ED (Polynomial r) where
+instance (ED r, Field r) => ED (Polynomial r) where
     (//) a = expand . fst . polyDivMod a
     (%) a = expand . snd . polyDivMod a
     div_ = polyDivMod
@@ -169,7 +169,7 @@ degree_expanded_unsafe (Sum p1 p2) = max (degree p1) (degree p2)
 degree_expanded_unsafe (Product p1 p2) = degree p1 + degree p2
 
 
-primitivePart :: ED r => Polynomial r -> (r, Polynomial r)
+primitivePart :: (GCDD r, ED r) => Polynomial r -> (r, Polynomial r)
 primitivePart p = (c, (flip (//) c) <$> expand p)
     where
         c = foldr1 gcd_ . fmap fst . toList $ p
@@ -178,7 +178,7 @@ primitivePart p = (c, (flip (//) c) <$> expand p)
 coercemonic :: Field r => Polynomial r -> (r, Polynomial r)
 coercemonic p = if isUnit lc then (lc, (monomial lcinv 0) * p) else (1, p)
     where
-        lcinv = (1 // lc)
+        lcinv = inv lc
         lc = leadingCoeff p
 
 

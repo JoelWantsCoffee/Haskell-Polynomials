@@ -14,14 +14,6 @@ import Data.List qualified as List
 import qualified Data.Ratio as Ratio
 import Combinatorics qualified as Combinatorics
 
--- x,y returns (c,a,b) such that ax + by = c = gcd(x,y)
-extendedGcd :: ED r => r -> r -> (r, r, r)
-extendedGcd a b | b == 0    = (a, 1, 0)
-                | otherwise = 
-                    let (q, r) = div_ a b
-                        (d, x, y) = extendedGcd b r
-                    in (d, y, x - q * y)
-
 {-
 
 https://en.wikipedia.org/wiki/Hensel%27s_lemma#Linear_lifting

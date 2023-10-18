@@ -7,6 +7,8 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Polynomial.Ring 
     ( Ring(..)
@@ -23,6 +25,7 @@ module Polynomial.Ring
     , reifyPrime
     , primeVal
     , toFiniteCyclicRing
+    , extendedGcd
     ) where
 
 import qualified Data.Mod as M
@@ -30,6 +33,41 @@ import GHC.TypeNats
 import Data.Reflection
 import Data.Proxy
 
+newtype Superclass a = Superclass a
+
+instance Eq a => Eq (Superclass a) where
+    (==) (Superclass a) (Superclass b) = a == b
+
+instance Num a => Num (Superclass a) where
+    (+) (Superclass a) (Superclass b) = Superclass $ a + b
+    (*) (Superclass a) (Superclass b) = Superclass $ a * b
+    abs (Superclass a) = Superclass $ abs a
+    signum (Superclass a) = Superclass $ signum a
+    fromInteger = Superclass . fromInteger
+    negate (Superclass a) = Superclass $ negate a
+
+instance (Ring a) => Ring (Superclass a) where
+    isUnit (Superclass a) = isUnit a
+
+instance Field a => ED (Superclass a) where
+    (//) (Superclass a) (Superclass b) = Superclass $ a * (inv b)
+    (%) _ _ = Superclass 0
+
+instance Field a => UFD (Superclass a) where
+    factor_squarefree a = (a, [])
+    squarefree a = a
+    irreducible _ = False
+
+instance ED a => GCDD (Superclass a) where
+    gcd_ (Superclass a) (Superclass b) = Superclass . (\(c, _, _) -> c) $ extendedGcd a b 
+
+-- x,y returns (c,a,b) such that ax + by = c = gcd(x,y)
+extendedGcd :: ED r => r -> r -> (r, r, r)
+extendedGcd a b | b == 0    = (a, 1, 0)
+                | otherwise = 
+                    let (q, r) = div_ a b
+                        (d, x, y) = extendedGcd b r
+                    in (d, y, x - q * y)
 
 {-  DEFINITIONS
 
@@ -68,7 +106,7 @@ class Ring a => GCDD a where
         returns b equal to a with any squares removed
 
 -}
-class GCDD a => UFD a where
+class Ring a => UFD a where
     factor_squarefree :: a -> (a, [a])
     squarefree :: a -> a
     irreducible :: a -> Bool
@@ -81,7 +119,7 @@ class GCDD a => UFD a where
     euclidean :: a -> Integer
         euclidean division.
 -}
-class GCDD a => ED a where
+class Ring a => ED a where
     (//) :: a -> a -> a
     (%) :: a -> a -> a
     euclidean :: a -> Integer
@@ -94,33 +132,20 @@ class GCDD a => ED a where
     inv : a -> b
         for any non-zero a return b such that a * b = 1
 -}
-class ED a => Field a where
+class Ring a => Field a where
     inv :: a -> a
-    inv = (//) 1
 
-{-  PROOFS
 
-    # all given by ghc #
+-- INTEGER 
 
--}
 instance Ring Integer where
     isUnit 1 = True
     isUnit (-1) = True
     isUnit _ = False
 
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
 instance GCDD Integer where
     gcd_ = gcd
 
-{-  PROOFS
-
-    # not implemented #
-    
--}
 instance UFD Integer where
     factor_squarefree = undefined
     squarefree = undefined
@@ -129,74 +154,28 @@ instance UFD Integer where
                     | i > 1     = null [ x | x <- [2 .. floor (sqrt (fromIntegral i :: Double))], i `mod` x == 0 ]
                     | otherwise = irreducible (-i)
 
-
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
 instance ED Integer where
     (//) = div
     (%) = mod
     div_ = divMod
     euclidean = id
 
+-- RATIONALS
 
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
 instance Ring Rational where
     isUnit = (/=) 0
 
+instance Field Rational where
+    inv = (/) 1
 
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
-instance GCDD Rational where
-    gcd_ a _ = a
-
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
-instance ED Rational where
-    (//) = (/)
-    (%) 0 b = b
-    (%) _ _ = 0
-    euclidean _ = 0
-
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
-instance UFD Rational where
-    factor_squarefree a = (a, [])
-    squarefree = id
-    irreducible _ = False 
-
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
-instance Field Rational
-
+deriving via (Superclass Rational) instance ED Rational
+deriving via (Superclass Rational) instance UFD Rational
+deriving via (Superclass Rational) instance GCDD Rational
 
 -- INTEGER QUOTIENT RINGS 
 
 type FiniteCyclicRing (n :: Nat) = M.Mod n
 
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
 instance KnownNat p => Ring (FiniteCyclicRing p) where
     isUnit = isJust . M.invertMod
         where
@@ -204,20 +183,10 @@ instance KnownNat p => Ring (FiniteCyclicRing p) where
             isJust (Just _) = True
             isJust Nothing  = False
 
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
 instance KnownNat p => GCDD (FiniteCyclicRing p) where
     gcd_ a 0 = a
     gcd_ a b = gcd_ a (a % b)
 
-{-  PROOFS
-
-    # all given by ghc #
-    
--}
 instance KnownNat p => ED (FiniteCyclicRing p) where
     (//) = (/)
     (%) 0 _ = 0
@@ -226,11 +195,6 @@ instance KnownNat p => ED (FiniteCyclicRing p) where
         | otherwise = a - b * (a // b)
     euclidean = fromIntegral . M.unMod
 
-{-  PROOFS
-
-    # not implemented #
-    
--}
 instance KnownNat p => UFD (FiniteCyclicRing p) where
     factor_squarefree _ = undefined
     squarefree _ = undefined
@@ -268,14 +232,10 @@ reifyPrime i f = reifyNat i (f . assumePrime)
 assumePrime :: forall (n :: Nat) (p :: Prime n) . (KnownNat n, KnownPrime p) => Proxy n -> Proxy p
 assumePrime Proxy = Proxy
 
-instance KnownPrime p => ED (PrimeField p) where
-    (//) = (/)
-    (%) 0 b = b
-    (%) _ _ = 0
-    euclidean _ = 0
+instance KnownPrime p => Field (PrimeField p) where
+    inv = (/) 1
 
-instance KnownPrime p => Field (PrimeField p)
-
+deriving via (Superclass (PrimeField p)) instance KnownPrime p => ED (PrimeField p)
 
 -- monoid rings
 
@@ -358,6 +318,14 @@ instance (Ord m, Monoid m, Ring r) => Ring (MonoidRing m r) where
             isUnit_ (Monomial c mempty) = isUnit c
             isUnit_ _ = False
 
+instance (Ord m, Monoid m, Ring r) => Eq (MonoidRing m r) where
+    (==) x y = isZero (x - y)
+        where
+            isZero p = isZero_ $ expand p
+            isZero_ (Sum a b) = (isZero_ a) && (isZero_ b)
+            isZero_ (Monomial a _) = a == 0
+            isZero_ (Product a b) = (isZero_ a) || (isZero_ b)
+
 degree :: (Ord m, Monoid m, Ring r) => MonoidRing m r -> m
 degree = degree_expanded_unsafe . expand
     where
@@ -374,11 +342,3 @@ leadingCoeff = leadingCoeff_ . expand
         leadingCoeff_ (Monomial c _) = c 
         leadingCoeff_ (Product a b) = error "what"
         leadingCoeff_ (Sum a b) = leadingCoeff_ a
-
-instance (Ord m, Monoid m, Ring r) => Eq (MonoidRing m r) where
-    (==) x y = isZero (x - y)
-        where
-            isZero p = isZero_ $ expand p
-            isZero_ (Sum a b) = (isZero_ a) && (isZero_ b)
-            isZero_ (Monomial a _) = a == 0
-            isZero_ (Product a b) = (isZero_ a) || (isZero_ b)

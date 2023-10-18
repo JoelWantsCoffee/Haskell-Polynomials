@@ -43,7 +43,7 @@ unfactor (Factoring (r,lst)) = (*) r $ foldl (*) 1 ((\(p, e) -> p ^ e) <$> lst)
 listify :: Ring r => Factoring (Polynomial r) -> [(Polynomial r)]
 listify (Factoring (_, lst)) = (expand . fst) <$> lst
 
-factor :: (ED r, UFD (Polynomial r)) => Polynomial r -> Maybe (Factoring (Polynomial r))
+factor :: (GCDD r, ED r, UFD (Polynomial r)) => Polynomial r -> Maybe (Factoring (Polynomial r))
 factor p_ =
     fmap Factoring 
     $ fmap (\(u, l) -> if isUnit lt then (expand $ lt * u, l) else (u, l ++ [(lt,1)]) )
