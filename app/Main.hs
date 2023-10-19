@@ -32,20 +32,25 @@ parse tokens = go tokens 0 0 where
 parsePoly :: forall a. (Read a, Ring a) => String -> Polynomial a
 parsePoly = parse . lexer
 
+output :: (Show a, Ring a) => Maybe (Factoring (Polynomial a)) -> String
+output (Just f) = show f
+output _ = "(factoring failed)"
 
 main :: IO ()
 main = do
   args_ <- getArgs
   args <- if (length args_ > 1) then pure args_ else ( lines <$> readFile (args_ !! 0) )
 
+  let showage = putStr . (foldr (\a b -> (a ++ "\n" ++ b)) "")
+
   case args of 
     "rational":t ->
-      putStrLn . show $ (factor . fmap toRational . parsePoly @Double) <$> t
+      showage $ (output . factor . fmap toRational . parsePoly @Double) <$> t
     "integer":t ->
-      putStrLn . show $ (factor . parsePoly @Integer) <$> t
+      showage $ (output . factor . parsePoly @Integer) <$> t
     "integer-mod":p:t ->
-      putStrLn $ reifyPrime (read p) (
-        \(Proxy :: Proxy p) -> show $ (factor . (<$>) (fromInteger @(PrimeField p)) . parsePoly @Integer) <$> t
+      showage $ reifyPrime (read p) (
+        \(Proxy :: Proxy p) -> (output . factor . (<$>) (fromInteger @(PrimeField p)) . parsePoly @Integer) <$> t
       )
     _ ->
       error "Wrong number of arguments"

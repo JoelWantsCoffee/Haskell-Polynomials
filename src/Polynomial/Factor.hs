@@ -11,6 +11,7 @@ module Polynomial.Factor
     , PrimeField
     , FiniteCyclicRing
     , Polynomial
+    , Factoring
     , reifyPrime
     , primeVal
     , factor

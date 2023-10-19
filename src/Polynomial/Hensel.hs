@@ -238,8 +238,10 @@ instance UFD (Polynomial Integer) where
     factor_squarefree :: Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
     factor_squarefree p_ = (expand $ (monomial u 0) * u2, lst)
         where
-            (u2, lst) = factor_primitive_part 7 p
-            (u, p) = primitivePart p_
+            (u2, lst) = factor_primitive_part (fromIntegral $ head [ p | p <- [ 5.. ], irreducible p, all ((/=) 0) $ (% p) <$> coeffs ]) f
+            coeffs = fst <$> toList f
+
+            (u, f) = primitivePart p_
 
     squarefree :: Polynomial Integer -> Polynomial Integer
     squarefree = squarefree_field
@@ -270,7 +272,7 @@ instance UFD (Polynomial Rational) where
             u = fromInteger $ foldr1 lcm $ (Ratio.denominator . fst) <$> (toList p)
         
     squarefree = squarefree_field
-    irreducible = undefined
+    irreducible = \_ -> True
 
 -- instance UFD (Polynomial Double) where
 --     factor_squarefree = (\(u,lst) -> (fromRational <$> u, (fmap fromRational) <$> lst)) . factor_squarefree @(Polynomial Rational) . fmap toRational
