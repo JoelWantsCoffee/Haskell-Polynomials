@@ -21,7 +21,7 @@ module Polynomial.Polynomial
 import Polynomial.Ring
 -- import qualified Data.Ratio as R
 
-type Degree = Integer
+type Degree = Natural
 
 data Polynomial r
             = Monomial r Degree
@@ -104,7 +104,7 @@ instance (GCDD r, ED r) => GCDD (Polynomial r) where
                 | g == 0 = f
                 | degree g < 1 = base
                 | (not $ isUnit $ leadingCoeff g_) = base
-                | otherwise = base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
+                | otherwise = expand $ base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
                 where
                     (fc, f_) = primitivePart f   
                     (gc, g_) = primitivePart g
@@ -115,7 +115,7 @@ instance (ED r, Field r) => ED (Polynomial r) where
     (//) a = expand . fst . polyDivMod a
     (%) a = expand . snd . polyDivMod a
     div_ = polyDivMod
-    euclidean = degree
+    euclidean = fromIntegral . degree
 
 
 fromList :: Ring r => [(r, Degree)] -> Polynomial r
@@ -170,15 +170,16 @@ degree_expanded_unsafe (Product p1 p2) = degree p1 + degree p2
 
 
 primitivePart :: (GCDD r, ED r) => Polynomial r -> (r, Polynomial r)
-primitivePart p = (c, (flip (//) c) <$> expand p)
+primitivePart p_ = (c, (flip (//) c) <$> p)
     where
         c = foldr1 gcd_ . fmap fst . toList $ p
+        p = expand p_
 
 
-coercemonic :: Field r => Polynomial r -> (r, Polynomial r)
+coercemonic :: ED r => Polynomial r -> (r, Polynomial r)
 coercemonic p = if isUnit lc then (lc, (monomial lcinv 0) * p) else (1, p)
     where
-        lcinv = inv lc
+        lcinv = 1 // lc
         lc = leadingCoeff p
 
 
@@ -318,4 +319,4 @@ knockThemDown a = knockThemDown $ sortThemOut a
 
 -- convert to an only-right-recursive tree where each monomial degree appears at most once 
 expand :: Ring r => Polynomial r -> Polynomial r
-expand = knockThemDown . sortThemOut . setThemUp
+expand = knockThemDown . knockThemDown . sortThemOut . setThemUp

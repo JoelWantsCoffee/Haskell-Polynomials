@@ -6,106 +6,70 @@ import Polynomial.Polynomial
 import Polynomial.Ring
 import Polynomial.CustomMatrix
 
-import Data.Matrix (Matrix, fromLists, toLists, identity, rref, (<|>))
+import Data.Matrix (Matrix, fromLists, toLists, identity, rref, (<|>), nrows)
 import Data.Either.Combinators qualified as Either
-import Data.List qualified as List
+import Data.List
 import GHC.TypeNats()
 import Data.Proxy
 
-fill :: KnownPrime p => Integer -> Integer -> Polynomial (PrimeField p) -> Matrix (PrimeField p)
-fill q n p = fromLists $ ( \i -> torowvector (n - 1) $ (monomial 1 $ i * q) % p ) <$> [1..(fromIntegral n)]
-  where
-    torowvector n_ p_ = fmap (flip coeff p_) [0..n_]
-
-unfill :: Ring r => [[r]] -> [Polynomial r]
-unfill = 
-  fmap ( \lst ->
+unvector :: Ring r => [r] -> Polynomial r
+unvector lst =
     expand
     $ foldr (+) 0
-    $ zipWith monomial lst [0 ..]
-  )
+    $ zipWith monomial (reverse lst) [0 ..]
 
-formmatrix :: forall p. KnownPrime p => Polynomial (PrimeField p) -> Matrix (PrimeField p)
-formmatrix p_ = form (primeVal (Proxy :: Proxy p)) (degree p_) p_
+vector :: Ring r => Natural -> Polynomial r -> [r]
+vector n p = fmap ( flip coeff p ) ( reverse [ 0 .. n ] )
+
+everyVector :: forall p. KnownPrime p => Integer -> [[PrimeField p]]
+everyVector i
+  | i == 1 = map singleton field
+  | otherwise = [ x:v | v <- everyVector (i - 1), x <- field ]
   where
-    form q n p = (fill (fromIntegral q) n p - identity (fromIntegral n)) 
-      <|> identity (fromIntegral n)
+    field = map fromIntegral [1 .. p]
+    p = primeVal (Proxy @p)
 
--- DATA.MATRIX CAN'T REDUCE SOME NON-INVERTABLE MATRICES. >:(
-nullspaceBasis :: KnownPrime p => Matrix (PrimeField p) -> [ Polynomial (PrimeField p) ]
-nullspaceBasis m = 
-  unfill
-  $ fmap (\lst -> drop (length lst `div` 2 ) lst)
-  -- $ (Either.fromRight $ error "i think the rref function sucks at its job")
-  $ (Either.fromRight $ gaussianJordanElimination $ toLists m)
-  $ fmap toLists
-  $ rref m
+nullspace :: forall p. KnownPrime p => [[PrimeField p]] -> [[PrimeField p]]
+nullspace mat = filter (all (== 0) . multiply mat) (everyVector (fromIntegral $ length mat))
 
+matrixFromLinearFunction :: Ring r => Integer -> ([r] -> [r]) -> [[r]]
+matrixFromLinearFunction d f = transpose [ f [ if (i == j) then 1 else 0 | i <- [0 .. d - 1] ] | j <- [0 .. d - 1] ]
 
-berlekampGcds :: forall p. KnownPrime p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-berlekampGcds f g = fmap ( \i -> ( gcd_ f (g - (fromIntegral i)) ) ) [0..(fromIntegral $ primeVal (Proxy :: Proxy p) :: Integer)]
-
-removeReducible :: KnownPrime p => [ Polynomial (PrimeField p) ] -> [ Polynomial (PrimeField p) ]
-removeReducible = removeReducible_ []
+berlekampMatrix :: forall p. KnownPrime p => Polynomial (PrimeField p) -> [[ PrimeField p ]]
+berlekampMatrix f = toLists $ q_f - i
   where
-    removeReducible_ prev (h:t) = removeReducible_ ((reduce (prev ++ t) h) : prev) t
-    removeReducible_ out [] = out
+    q_f = fromLists $ matrixFromLinearFunction (fromIntegral n) (vector (n - 1) . (% f) . (^ p) . unvector)
+    i = identity (fromIntegral n)
 
-    reduce :: KnownPrime p => [ Polynomial (PrimeField p) ] -> Polynomial (PrimeField p) -> Polynomial (PrimeField p)
-    reduce [] p = p
-    reduce (h:t) p  | (h == p) = reduce t p
-                    | ((==) 0 $ p % h) && (not . isUnit $ h // p) = reduce (h:t) (p // h)
-                    | otherwise = reduce t p
+    n = degree f
+    p = primeVal (Proxy :: Proxy p)
 
--- removeReducible lst = List.filter ( \p -> (==) Nothing $ List.find (\p2 -> (p2 /= p) && (isZero $ p % p2) && (not . isUnit $ p2 // p)) lst ) lst
-
-findPartners :: KnownPrime p => Polynomial (PrimeField p) -> Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-findPartners p f = (:) f $ fmap (\n -> p // (f ^ n)) [1..(degree p - degree f)]
-
-possibleFactors :: KnownPrime p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
-possibleFactors p =
-  List.filter (\p_ -> not $ isUnit p_ || p_ == 0)
-  $ List.nub
-  $ (<$>) expand
-  $ List.filter ((==) 0 . (%) p)
-  $ List.filter ((/=) 0)
-  $ List.nub
-  $ (<$>) expand
-  $ List.concatMap (findPartners p)
-  $ List.nub
-  $ (<$>) expand
-  $ List.concatMap (berlekampGcds p)
-  -- $ fmap coerceMonic
-  $ nullspaceBasis 
-  $ formmatrix p
-
--- sqfrFactors :: Prime p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
--- sqfrFactors p = 
---   fmap expand
---   $ (:) p
---   $ List.filter ((/=) 1)
---   $ List.nub
---   $ fmap (expand . gcd_ p)
---   $ possibleFactors p
-
-berlekamp :: KnownPrime p => Polynomial (PrimeField p) -> (Polynomial (PrimeField p), [ Polynomial (PrimeField p) ])
-berlekamp p | degree p == 0 = (p, [])
-            | otherwise = 
-  (,) lc
-  $ List.nub
-  $ (fmap $ expand . snd . coercemonic)
-  $ removeReducible
-  $ List.nub
-  $ (fmap $ expand . snd . primitivePart)
-  $ possibleFactors (p // lc)
+berlekamp :: forall p. KnownPrime p => Polynomial (PrimeField p) -> [ Polynomial (PrimeField p) ]
+berlekamp f_
+  | isZeroOrUnit f = []
+  | irreducible f = [f]
+  | otherwise = 
+    concatMap berlekamp
+    . ( \h -> [ gcd_ (f) (h - c) | c <- field ] )
+    . head
+    . filter ( not . isZeroOrUnit )
+    . map ( monic . unvector )
+    . nullspace
+    $ berlekampMatrix f
   where
-    lc = (monomial (leadingCoeff p) 0)
+    field = map fromIntegral [1 .. p]
+    monic = expand . snd . primitivePart
+    isZeroOrUnit = \h -> (isUnit h) || (h == 0)
+    p = primeVal (Proxy :: Proxy p)
+    f = expand $ squarefree f_
+
 
 instance (KnownPrime p) => UFD (Polynomial (PrimeField p)) where
-  factor_squarefree = berlekamp
+  factor_squarefree = (\(u, p) -> (monomial u 0, berlekamp p)) . coercemonic 
   squarefree = squarefree_field
-  irreducible p | (squarefree_field monic) /= monic = False
-                | (==) 1 . List.length . snd . berlekamp $ p = True
-                | otherwise = False
+  irreducible p | monic == 0 = False
+                | isUnit monic = False
+                | (squarefree_field monic) /= monic = False
+                | otherwise = length (nullspaceBasis $ berlekampMatrix monic) == 1
               where
                 monic = p // (monomial (leadingCoeff p) 0)

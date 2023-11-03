@@ -49,14 +49,15 @@ factor p_ =
     fmap Factoring 
     $ fmap (\(u, l) -> if isUnit lt then (expand $ lt * u, l) else (u, l ++ [(lt,1)]) )
     $ ( \(a,l) -> 
-        if (not $ foldr (\t -> (&&) (irreducible $ fst t)) True l) then
-            Nothing
-        else if (isUnit a) then
+        -- if (not $ foldr (\t -> (&&) (irreducible $ fst t)) True l) then
+        --     Nothing
+        if (isUnit a) then
             Just (a,l) 
         else if (irreducible a) then
             Just (1, (a,1):l) 
         else
-            Nothing
+            Just (a,l)
+            -- Nothing
       )
     $ (\(u,lst) -> (u, List.filter ((<) 0 . snd) lst))
     $ foldr (\fact (rest, lst) -> (\(r,l) -> (expand r, l:lst)) $ recover_power rest (fact, 0)) (p, []) factors

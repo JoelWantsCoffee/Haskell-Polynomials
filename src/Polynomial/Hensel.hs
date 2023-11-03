@@ -14,77 +14,9 @@ import Data.List qualified as List
 import qualified Data.Ratio as Ratio
 import Combinatorics qualified as Combinatorics
 
-{-
+import Debug.Trace
 
-https://en.wikipedia.org/wiki/Hensel%27s_lemma#Linear_lifting
-
-f === gh    mod p^k
-
-take 
-    D : D === f - gh    mod p^(k+1)
-
-    c : aD === _ * h + c    mod p^(k+1)
-    d : bD === _ * g + d    mod p^(k+1)
-
-    g' = g + c
-    h' = h + d
-
--}
-lift2 :: forall (pk1 :: Nat). KnownNat pk1
-    => Polynomial Integer
-    -> Polynomial Integer
-    -> (Polynomial Integer, Polynomial Integer)
-    -> (Polynomial Integer, Polynomial Integer)
-    -> (Polynomial Integer, Polynomial Integer)
-lift2 f lu (a,b) (g,h) = ( expand $ toIntegerNormal <$> (fromInteger <$> g) + beta*d, expand $ euclidean <$> (fromInteger <$> h) + beta*c )
-    where
-        -- beta = ( 1 - gamma ) // alpha
-        beta :: Polynomial (FiniteCyclicRing pk1)
-        beta =  monomial (1 // (fromInteger $ leadingCoeff lu)) 0
-
-        delta :: Polynomial (FiniteCyclicRing pk1)
-        delta = expand $ fromInteger <$> f - lu * g * h
-
-        c :: Polynomial (FiniteCyclicRing pk1)
-        c = (<$>) fromInteger . expand . snd $ polyDivMod (a * (toIntegerNormal <$> delta)) h
-
-        d :: Polynomial (FiniteCyclicRing pk1)
-        d = (<$>) fromInteger . expand . snd $ polyDivMod (b * (toIntegerNormal <$> delta)) g
-
-
-do_lift2 :: (Natural, Natural)
-    -> Polynomial Integer
-    -> Polynomial Integer
-    -> (Polynomial Integer, Polynomial Integer)
-    -> (Polynomial Integer, Polynomial Integer)
-do_lift2 (p,k) f lf (g,h) = 
-    reifyPrime (fromIntegral p)
-        (  \(_ :: Proxy p) -> 
-            let (r, a, b) = extendedGcd @(Polynomial (PrimeField p)) (fromInteger <$> g) (fromInteger <$> h)
-            in reifyNat 
-                ( fromIntegral (p^(k+1)) )
-                ( \(_ :: Proxy pk1) -> 
-                    lift2 @pk1 f lf (toIntegerNormal' <$> a // r, toIntegerNormal' <$> b // r) (g,h) 
-                )
-        )
-
-
-lift_to :: forall (n :: Nat) (k :: Nat) (p :: Prime n). (KnownPrime p, KnownNat k, KnownNat (Pow p k))
-    => Polynomial Integer
-    -> (Polynomial Integer, [Polynomial (FiniteCyclicRing (Pow p k))])
-lift_to poly = (,) lu $ (fmap fromInteger . snd . lift_) <$> (split [] basefact)
-    where
-        (lu, basefact) = factorInField p poly
-
-        lift_ :: (Polynomial Integer, Polynomial Integer) -> (Polynomial Integer, Polynomial Integer)
-        lift_ = foldr (.) id ((\k_ -> do_lift2 (p, k_) poly lu ) <$> (List.reverse [1..(k - 1)]))
-        
-        split :: Ring r => [(Polynomial r)] -> [(Polynomial r)] -> [(Polynomial r, Polynomial r)]
-        split prev (h:t) = (expand $ foldr (*) 1 (prev ++ t), h) : (split (h:prev) t)
-        split _ [] = []
-        
-        k = natVal $ (Proxy :: Proxy k)
-        p = primeVal $ (Proxy :: Proxy p)
+{- OLD
 
 
 {- hensel's lemma
@@ -167,95 +99,214 @@ factorize_linear :: Polynomial Integer -> [Polynomial Integer]
 factorize_linear p = recombine p $ liftN @13 @6 p
 -}
 
+
+END OLD -}
+
+
+
+
+
+{-
+
+https://en.wikipedia.org/wiki/Hensel%27s_lemma#Linear_lifting
+
+f === gh    mod p^k
+
+take 
+    D : D === f - gh    mod p^(k+1)
+
+    c : aD === _ * h + c    mod p^(k+1)
+    d : bD === _ * g + d    mod p^(k+1)
+
+    g' = g + c
+    h' = h + d
+
+-}
+liftPair_ :: forall (pk1 :: Nat). KnownNat pk1
+    => Polynomial Integer
+    -> Polynomial Integer
+    -> (Polynomial Integer, Polynomial Integer)
+    -> (Polynomial Integer, Polynomial Integer)
+    -> (Polynomial Integer, Polynomial Integer)
+liftPair_ f lu (a,b) (g,h) = 
+    ( expand $ fmap toIntegerNormal $ (toRing g) + beta*d
+    , expand $ fmap injectInteger $ (toRing h) + beta*c
+    )
+    where
+        -- beta = ( 1 - gamma ) // alpha
+        betainv = fromInteger @(FiniteCyclicRing pk1) (leadingCoeff lu)
+        beta = monomial (1 // betainv) 0
+
+        delta = toInteger $ toRing $ f - lu * g * h
+
+        c = toRing $ rem (a * delta) h
+        d = toRing $ rem (b * delta) g
+
+        toInteger = fmap toIntegerNormal . expand 
+        toRing = fmap $ fromInteger @(FiniteCyclicRing pk1)
+        rem x y = expand . snd $ polyDivMod x y
+
+liftPair :: (Natural, Natural)
+    -> Polynomial Integer
+    -> Polynomial Integer
+    -> (Polynomial Integer, Polynomial Integer)
+    -> (Polynomial Integer, Polynomial Integer)
+liftPair (p,k) f lf (g,h) = 
+    reifyPrime (fromIntegral p)
+        $ \(_ :: Proxy p) -> reifyNat ( fromIntegral (p^(k+1)) )
+        $ \(_ :: Proxy pk1) -> 
+            let 
+                (r, a, b) = extendedGcd @(Polynomial (PrimeField p)) (fromInteger <$> g) (fromInteger <$> h)
+            in
+                liftPair_ @pk1 f lf (toIntegerNormal' <$> a // r, toIntegerNormal' <$> b // r) (g,h)
+
+
+liftResidueFactors :: forall (n :: Nat) (k :: Nat) (p :: Prime n). (KnownPrime p, KnownNat k, KnownNat (Pow p k))
+    => Polynomial Integer
+    -> (Polynomial Integer, [ Polynomial Integer ])
+    -> (Polynomial Integer, [ Polynomial (FiniteCyclicRing (Pow p k)) ])
+liftResidueFactors poly (lu, basefact) = (,) lu $ (fmap fromInteger . snd . liftSequence) <$> (split [] basefact)
+    where
+        liftSequence :: (Polynomial Integer, Polynomial Integer) -> (Polynomial Integer, Polynomial Integer)
+        liftSequence = foldl (flip (.)) id ( fmap ( \k_ -> liftPair (p, k_) poly lu ) [1..(k - 1)] )
+        
+        split :: Ring r => [(Polynomial r)] -> [(Polynomial r)] -> [(Polynomial r, Polynomial r)]
+        split prev (h:t) = (expand $ foldr (*) 1 (prev ++ t), h) : (split (h:prev) t)
+        split _ [] = []
+        
+        k = natVal $ (Proxy :: Proxy k)
+        p = primeVal $ (Proxy :: Proxy p)
+
 -- cast ( PrimeField p ) -> [ -p/2, p )
 toIntegerNormal :: forall (n :: Nat). KnownNat n => FiniteCyclicRing n -> Integer
 toIntegerNormal c_ = if c < ( p `div` 2) then c else c - p
     where
-        c = (euclidean c_) `mod` p
+        c = (injectInteger c_) `mod` p
         p = fromIntegral $ natVal (Proxy :: Proxy n)
 
 toIntegerNormal' :: forall (n :: Nat) (p :: Prime n). KnownPrime p => PrimeField p -> Integer
 toIntegerNormal' c = toIntegerNormal $ toFiniteCyclicRing @n c
 
 -- The-art-of-computer-programming.-Vol.2.-Seminumerical-algorithms-by-Knuth-Donald PAGE 452 F2
-recombine :: forall (m :: Nat). KnownNat m 
+recombineResidueFactors :: forall (m :: Nat). KnownNat m 
     => Polynomial Integer 
     -> (Polynomial Integer, [Polynomial (FiniteCyclicRing m)])
     -> [Polynomial Integer]
-recombine f (lu, lst) = List.nub $ recombine_ 1 f lst
+recombineResidueFactors f (lu, lst) = List.nub $ recombine 1 f lst
     where
-        recombine_ :: Integer -> Polynomial Integer -> [Polynomial (FiniteCyclicRing m)] -> [Polynomial Integer]
-        recombine_ d u polys = if d > r then [] else ((snd . primitivePart) <$> out) ++ recombine_ (d + 1) u remaining
+        recombine :: Integer -> Polynomial Integer -> [Polynomial (FiniteCyclicRing m)] -> [Polynomial Integer]
+        recombine num u possibles
+                | num > r = [] 
+                | otherwise = (fmap (snd . primitivePart) factors) ++ recombine (num + 1) u remaining
             where
-                remaining = polys List.\\ (List.concat remove)
-                (remove, out) = unzip $ List.filter ( \(_, p) -> (==) 0 . snd $ polyDivMod (lu * u) p ) vbars
-                vbars = (\lst_ -> (lst_, fmap toIntegerNormal $ expand $ (*) (fromInteger <$> lu) $ foldr1 (*) lst_)) <$> choices
-                choices = Combinatorics.tuples (fromInteger d) polys
-                r :: Integer
-                r = fromIntegral $ List.length polys
-                -- m :: Integer
-                -- m = fromIntegral $ natVal (Proxy :: Proxy m)
+                remaining = possibles List.\\ (List.concat used)
+
+                (used, factors) = unzip
+                    $ List.filter ( divides (lu * u) . snd )
+                    $ vbars
+
+                -- vbars = [( polys used, their recombination )]
+                vbars = fmap 
+                        (\polys -> 
+                            ( polys
+                            , fmap toIntegerNormal
+                                $ expand
+                                $ (*) (fmap fromInteger lu)
+                                $ foldr1 (*) polys
+                            )
+                        )
+                        choices
                 
+                choices = Combinatorics.tuples (fromInteger num) possibles
+
+                r :: Integer
+                r = fromIntegral $ List.length possibles
+
+                divides a b = (0 ==) . snd $ polyDivMod a b
 
 
-
--- hasMultipleRoots :: ED r => Polynomial r -> Bool
--- hasMultipleRoots p = (/=) (1) (expand $ gcd_ p (differentiate p))
-
-factorInField :: Natural -> Polynomial Integer -> (Polynomial Integer, [ Polynomial Integer ])
-factorInField n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal' . snd . coercemonic . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p
+factorInResidue :: Integer -> Polynomial Integer -> (Polynomial Integer, [ Polynomial Integer ])
+factorInResidue n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal' . snd . coercemonic . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p
     where
         lc = leadingCoeff p
 
-funcInField :: (forall (n :: Nat) (p :: Prime n). KnownPrime p => Polynomial (PrimeField p) -> r) -> Natural -> Polynomial Integer -> r
-funcInField func n poly = 
-    reifyPrime (fromIntegral n) $ (\(_ :: Proxy p) -> ( func $ fmap (fromInteger @(PrimeField p)) poly ))
+funcInField :: (forall (n :: Nat) (p :: Prime n). KnownPrime p => Polynomial (PrimeField p) -> r) -> Integer -> Polynomial Integer -> r
+funcInField func n poly = reifyPrime n $ (\(_ :: Proxy p) -> ( func $ fmap (fromInteger @(PrimeField p)) poly ))
 
-factors_from_base_prime :: Polynomial Integer -> Natural -> [Polynomial Integer]
-factors_from_base_prime poly m  | irreducible n = reifyNat n $ \(_ :: Proxy p) -> recombine poly $ lift_to @p @5 poly
-                                | otherwise = []
-                                where n = fromIntegral m
+factorsFromResidue :: Polynomial Integer -> Natural -> [Polynomial Integer]
+factorsFromResidue poly m
+    | irreducible n = reifyNat n
+        $ \(_ :: Proxy p) -> reifyNat expo
+        $ \(_ :: Proxy e) -> 
+            fmap (expand . snd . coercemonic)
+            $ recombineResidueFactors poly 
+            $ liftResidueFactors @p @e poly 
+            $ factorInResidue n poly -- calls berlekamp
+    | otherwise = []
+    where
+        n = fromIntegral m
+        expo = List.head [ e | e <- [1..], n ^ e >= bound ] -- mignotte's bound
+        bound = ( sum $ fmap abs coeffs ) * ( 2 ^ (fromIntegral $ degree poly) )
+        coeffs = fmap fst (toList poly)
 
-factor_primitive_part :: Natural -> Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
-factor_primitive_part n p | isUnit p = (p, [])
-                    | irreducible p = (1, [p])
-                    | otherwise =
-                        ( \(poly, facts) -> append_factors facts $ factor_primitive_part (n+1) poly )
-                        $ foldr (\fact (poly, rest) -> append_factors rest (remove_powers poly fact)) (p, []) factors
-                    where
-                        remove_powers :: Polynomial Integer -> Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
-                        remove_powers base fact | ((==) 0 . snd $ polyDivMod base fact) = (fst $ remove_powers (base `divide` fact) fact, [fact])
-                                                | otherwise = (base, [])
+stripFactors :: Polynomial Integer -> [Polynomial Integer] -> ( Polynomial Integer , [Polynomial Integer] )
+stripFactors poly_ facts_ = 
+        ( foldr (gcd_) poly $ fmap (removeFactor poly) facts
+        , List.filter (divides poly) (facts)
+        )
+    where
+        removeFactor p fact
+            | p == 0 = p
+            | divides p fact = removeFactor (divide p fact) fact
+            | otherwise = p
+        
+        facts = fmap expand facts_
+        poly = expand poly_
 
-                        append_factors :: [a] -> (a, [a]) -> (a,[a])
-                        append_factors l1 (a,l2) = (a, l1 ++ l2)
+        divides a b = (0 ==) . snd $ polyDivMod a b
 
-                        factors = factors_from_base_prime p n
+factorPrimitivePart :: Natural 
+    -> Polynomial Integer 
+    -> (Polynomial Integer, [Polynomial Integer])
+factorPrimitivePart n p 
+    | isUnit p = (p, [])
+    | irreducible p = (1, [p])
+    | otherwise = 
+        map2 (facts ++) (factorPrimitivePart (n+1) poly)
+    where
+        (poly, facts) = stripFactors p (factorsFromResidue p n)
+        map2 f (a,b) = (a, f b)
 
 
 instance UFD (Polynomial Integer) where
-    -- factor p (mod 13), then lift to factors to (mod 13^6), then recombine
     factor_squarefree :: Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
     factor_squarefree p_ = (expand $ (monomial u 0) * u2, lst)
         where
-            (u2, lst) = factor_primitive_part (fromIntegral $ head [ p | p <- [ 5.. ], irreducible p, all ((/=) 0) $ (% p) <$> coeffs ]) f
+            (u2, lst) = factorPrimitivePart (fromIntegral $ head 
+                [ p | p <- [ 5.. ]
+                    , irreducible p
+                    , all (/= 0) $ fmap (% p) coeffs
+                ]) f
             coeffs = fst <$> toList f
-
             (u, f) = primitivePart p_
 
     squarefree :: Polynomial Integer -> Polynomial Integer
     squarefree = squarefree_field
 
     irreducible :: Polynomial Integer -> Bool
-    irreducible p
-        | squarefree p /= p = False
-        | otherwise = ( (degree p == 0) && (not $ isUnit p) ) || ( isIrreducibleMod prime1 )
+    irreducible p_
+        | p /= p_ = False
+        | (degree p == 0) && (not $ isUnit p) = True
+        | otherwise = any isIrreducibleMod 
+            [ prime | prime <- [(max 3 (deg + 1))..(max 3 $ (*) (2 ^ deg) $ sum $ map abs coeffs)] -- the range to search
+                , irreducible prime -- prime is prime
+                , all (/= 0) $ map (% prime) coeffs -- doesn't kill any coeffs
+                ]
         where 
-            isIrreducibleMod primen = reifyPrime primen ( \(_ :: Proxy prime) -> foldr (&&) True $ fmap (\a -> (a == 1) || (a == p) ) $ fmap (gcd_ p) $ fmap (fmap toIntegerNormal') $ snd $ factor_squarefree $ squarefree $ fromInteger @(PrimeField prime) <$> (squarefree p) )
-            prime1 = ( List.head [ p_ | p_ <- [(max (deg + 1) 5)..], (lc `mod` p_) /= 0, irreducible p_ ] )
-
-            deg = degree p
-            lc = leadingCoeff p
+            isIrreducibleMod prime = funcInField irreducible prime p
+            coeffs = filter (/= 0) $ fst <$> toList p
+            deg = fromIntegral $ degree p
+            p = expand $ squarefree p_
 
 
 instance UFD (Polynomial Rational) where

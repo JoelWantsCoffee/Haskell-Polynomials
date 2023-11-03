@@ -15,13 +15,13 @@ lexer [] = []
 lexer ('x':xs) = Var : lexer xs
 lexer ('^':xs) = let (n, rest) = span (`elem` ['0'..'9']) xs in Exp (read n) : lexer rest
 lexer ('+':xs) = Plus : lexer xs
-lexer xs = let (n, rest) = span (`elem` ['0'..'9']) xs in Coeff (read n) : lexer rest
+lexer xs = let (n, rest) = span (`elem` '-':['0'..'9']) xs in Coeff (read n) : lexer rest
 
 -- The parse function processes the Tokens to build the Polynomial.
 parse :: (Read a, Ring a) => [Token a] -> Polynomial a
 parse tokens = go tokens 0 0 where
-  go [] coeff exp = monomial coeff exp
-  go (Plus : ts) coeff exp = monomial coeff exp + go ts 0 0
+  go [] coeff exp = monomial coeff (fromInteger exp)
+  go (Plus : ts) coeff exp = monomial coeff (fromInteger exp) + go ts 0 0
   go (Coeff c : ts) _ _ = go ts c 0
   go (Var : ts) coeff _ = go ts coeff 1
   go (Exp e : ts) coeff _ = go ts coeff e
