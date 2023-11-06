@@ -103,11 +103,12 @@ instance (GCDD r, ED r) => GCDD (Polynomial r) where
     gcd_ f g    | f == 0 = g
                 | g == 0 = f
                 | degree g < 1 = base
-                | (not $ isUnit $ leadingCoeff g_) = base
-                | otherwise = expand $ base * (gcd_ g_ $ snd $ polyDivMod f_ g_)
+                -- | (0 /=) $ (leadingCoeff f_) % (leadingCoeff g_) = base
+                | otherwise = expand $ base * (gcd_ g_ r)
                 where
-                    (fc, f_) = primitivePart f   
+                    (fc, f_) = primitivePart f
                     (gc, g_) = primitivePart g
+                    r = snd $ polyDivMod ((monomial (leadingCoeff g_) 0) * f_) g_
                     base = monomial (gcd_ fc gc) 0
 
 

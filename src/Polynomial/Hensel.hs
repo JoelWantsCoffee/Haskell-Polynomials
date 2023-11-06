@@ -10,9 +10,9 @@ import Polynomial.Berlekamp()
 import Data.Proxy
 import GHC.TypeNats
 import Data.Reflection
-import Data.List qualified as List
+import Data.List -- qualified as List
 import qualified Data.Ratio as Ratio
-import Combinatorics qualified as Combinatorics
+import Combinatorics -- qualified as Combinatorics
 
 import Debug.Trace
 
@@ -187,72 +187,119 @@ toIntegerNormal c_ = if c < ( p `div` 2) then c else c - p
 toIntegerNormal' :: forall (n :: Nat) (p :: Prime n). KnownPrime p => PrimeField p -> Integer
 toIntegerNormal' c = toIntegerNormal $ toFiniteCyclicRing @n c
 
--- The-art-of-computer-programming.-Vol.2.-Seminumerical-algorithms-by-Knuth-Donald PAGE 452 F2
 recombineResidueFactors :: forall (m :: Nat). KnownNat m 
     => Polynomial Integer 
     -> (Polynomial Integer, [Polynomial (FiniteCyclicRing m)])
     -> [Polynomial Integer]
-recombineResidueFactors f (lu, lst) = List.nub $ recombine 1 f lst
+recombineResidueFactors f (lu, lst) = fmap (snd . primitivePart) $ recombine 1 (leadingCoeff lu) f lst
+
+-- The-art-of-computer-programming.-Vol.2.-Seminumerical-algorithms-by-Knuth-Donald PAGE 452 F2
+recombine :: forall (m :: Nat). KnownNat m
+    => Natural 
+    -> Integer 
+    -> Polynomial Integer 
+    -> [Polynomial (FiniteCyclicRing m)] 
+    -> [Polynomial Integer]
+recombine n lu f unusedFactors
+        | unusedFactors == [] = []
+        | n > r = error $ "couldn't use factors " ++ show n
+        | otherwise = recoveredFactors
+                    ++ recombine (n + 1) (leadingCoeff f_next) 
+                        f_next remainingFactors
     where
-        recombine :: Integer -> Polynomial Integer -> [Polynomial (FiniteCyclicRing m)] -> [Polynomial Integer]
-        recombine num u possibles
-                | num > r = [] 
-                | otherwise = (fmap (snd . primitivePart) factors) ++ recombine (num + 1) u remaining
-            where
-                remaining = possibles List.\\ (List.concat used)
+        f_next = f `divide` product recoveredFactors
+        remainingFactors = unusedFactors \\ concat usedCombos
 
-                (used, factors) = unzip
-                    $ List.filter ( divides (lu * u) . snd )
-                    $ vbars
+        ( usedCombos , recoveredFactors ) = unzip
+            $ filter ( divides f . snd ) vbars
 
-                -- vbars = [( polys used, their recombination )]
-                vbars = fmap 
-                        (\polys -> 
-                            ( polys
-                            , fmap toIntegerNormal
-                                $ expand
-                                $ (*) (fmap fromInteger lu)
-                                $ foldr1 (*) polys
-                            )
-                        )
-                        choices
-                
-                choices = Combinatorics.tuples (fromInteger num) possibles
+        -- vbars = [( polys used, their recombination )]
+        vbars = concatMap ( \combo -> map ( combo, )
+                    $ ( \q -> nub [ primitive 
+                                    $ toInteger
+                                    $ q * fromInteger u 
+                                    | u <- [1 .. lu]
+                                    , lu % u == 0 ] )
+                    $ monic
+                    $ product combo )
+                $ tuples (fromIntegral n) unusedFactors
 
-                r :: Integer
-                r = fromIntegral $ List.length possibles
-
-                divides a b = (0 ==) . snd $ polyDivMod a b
+        primitive = snd . primitivePart
+        monic = snd . coercemonic
+        toInteger = fmap toIntegerNormal . expand
+        r = genericLength unusedFactors
+        divides a b = (0 ==) . snd $ polyDivMod a b
 
 
 factorInResidue :: Integer -> Polynomial Integer -> (Polynomial Integer, [ Polynomial Integer ])
-factorInResidue n p = (,) (fromInteger lc) $ funcInField ((fmap (fmap toIntegerNormal' . snd . coercemonic . expand)) . snd . factor_squarefree . (// (fromInteger lc))) n p
+factorInResidue n p 
+    | irreducible n =
+        ( fromInteger lc , ) $ 
+        funcInField
+            ( \poly -> 
+                let 
+                    monic = expand $ poly // (fromInteger lc)
+                in if squarefree monic == monic then
+                    fmap ( 
+                        expand 
+                        . fmap toIntegerNormal' 
+                        . snd 
+                        . coercemonic 
+                        . expand )
+                    . snd 
+                    . factor_squarefree
+                    $ monic
+                else 
+                    []
+            ) n p 
+    | otherwise = ( fromInteger lc, [] )
     where
         lc = leadingCoeff p
+
+isSquarefreeMod :: Integer -> Polynomial Integer -> Bool
+isSquarefreeMod p poly = funcInField isSquarefree p poly
+    where
+        isSquarefree a = let monic = expand $ a // (monomial (leadingCoeff a) 0) in squarefree monic == monic
 
 funcInField :: (forall (n :: Nat) (p :: Prime n). KnownPrime p => Polynomial (PrimeField p) -> r) -> Integer -> Polynomial Integer -> r
 funcInField func n poly = reifyPrime n $ (\(_ :: Proxy p) -> ( func $ fmap (fromInteger @(PrimeField p)) poly ))
 
 factorsFromResidue :: Polynomial Integer -> Natural -> [Polynomial Integer]
-factorsFromResidue poly m
-    | irreducible n = reifyNat n
-        $ \(_ :: Proxy p) -> reifyNat expo
+factorsFromResidue poly m = reifyNat n
+        $ \(_ :: Proxy p) -> reifyNat k
         $ \(_ :: Proxy e) -> 
             fmap (expand . snd . coercemonic)
             $ recombineResidueFactors poly 
             $ liftResidueFactors @p @e poly 
             $ factorInResidue n poly -- calls berlekamp
-    | otherwise = []
     where
         n = fromIntegral m
-        expo = List.head [ e | e <- [1..], n ^ e >= bound ] -- mignotte's bound
-        bound = ( sum $ fmap abs coeffs ) * ( 2 ^ (fromIntegral $ degree poly) )
+        k = head [ e | e <- [1..], n ^ e >= bound ]
+        bound = ( sum $ fmap abs coeffs ) * ( 2 ^ (1 + degree poly) )
+        coeffs = fmap fst (toList poly)
+
+zassenhaus :: Polynomial Integer -> [Polynomial Integer]
+zassenhaus poly = reifyNat n
+        $ \(_ :: Proxy p) -> reifyNat k
+        $ \(_ :: Proxy e) -> 
+            fmap (expand . snd . coercemonic)
+            $ recombineResidueFactors poly 
+            $ liftResidueFactors @p @e poly 
+            $ factorInResidue n poly -- calls berlekamp
+    where
+        n = head [ p | p <- [5..]
+                , irreducible p
+                , all (/= 0) $ fmap (% p) coeffs
+                , isSquarefreeMod p poly
+                ]
+        k = head [ e | e <- [1..], n ^ e >= bound ]
+        bound = ( sum $ fmap abs coeffs ) * ( 2 ^ (1 + degree poly) )
         coeffs = fmap fst (toList poly)
 
 stripFactors :: Polynomial Integer -> [Polynomial Integer] -> ( Polynomial Integer , [Polynomial Integer] )
 stripFactors poly_ facts_ = 
         ( foldr (gcd_) poly $ fmap (removeFactor poly) facts
-        , List.filter (divides poly) (facts)
+        , filter (divides poly) (facts)
         )
     where
         removeFactor p fact
@@ -270,7 +317,6 @@ factorPrimitivePart :: Natural
     -> (Polynomial Integer, [Polynomial Integer])
 factorPrimitivePart n p 
     | isUnit p = (p, [])
-    | irreducible p = (1, [p])
     | otherwise = 
         map2 (facts ++) (factorPrimitivePart (n+1) poly)
     where
@@ -282,16 +328,21 @@ instance UFD (Polynomial Integer) where
     factor_squarefree :: Polynomial Integer -> (Polynomial Integer, [Polynomial Integer])
     factor_squarefree p_ = (expand $ (monomial u 0) * u2, lst)
         where
-            (u2, lst) = factorPrimitivePart (fromIntegral $ head 
-                [ p | p <- [ 5.. ]
-                    , irreducible p
-                    , all (/= 0) $ fmap (% p) coeffs
-                ]) f
-            coeffs = fst <$> toList f
+            (u2, lst) = stripFactors f (zassenhaus f)
+            --     factorPrimitivePart (fromIntegral $ head 
+            --     [ p | p <- [ 5.. ]
+            --         , irreducible p
+            --         , all (/= 0) $ fmap (% p) coeffs
+            --     ]) f
+            -- coeffs = fst <$> toList f
             (u, f) = primitivePart p_
 
     squarefree :: Polynomial Integer -> Polynomial Integer
     squarefree = squarefree_field
+    -- squarefree f
+    --         | degree g == 0 = f
+    --         | otherwise = squarefree g
+    --     where g = expand $ gcd_ f (differentiate f)
 
     irreducible :: Polynomial Integer -> Bool
     irreducible p_

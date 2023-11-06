@@ -12,6 +12,7 @@ module Polynomial.Factor
     , FiniteCyclicRing
     , Polynomial
     , Factoring
+    , AssumePrime
     , reifyPrime
     , primeVal
     , factor

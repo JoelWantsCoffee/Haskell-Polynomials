@@ -32,6 +32,9 @@ everyVector i
 nullspace :: forall p. KnownPrime p => [[PrimeField p]] -> [[PrimeField p]]
 nullspace mat = filter (all (== 0) . multiply mat) (everyVector (fromIntegral $ length mat))
 
+-- basis :: Field f => [[f]] -> [[f]]
+-- basis lst = gramSchmidt $ filter (not . all (== 0)) lst
+
 matrixFromLinearFunction :: Ring r => Integer -> ([r] -> [r]) -> [[r]]
 matrixFromLinearFunction d f = transpose [ f [ if (i == j) then 1 else 0 | i <- [0 .. d - 1] ] | j <- [0 .. d - 1] ]
 
