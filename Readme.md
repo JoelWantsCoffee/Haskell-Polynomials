@@ -16,4 +16,10 @@ Use the `factor` function with type applicaiton to factor polynomials.
 factor @Integer (x^3 + x^2 + x + 1)
 ```
 
-Currently, `Polynomial (PrimeField p)`, `Polynomial Integer`, and `Polynomial Rational` should work.
+Alternatively, use the command line tool.
+
+```bash
+cabal run exe:generic-polynomials -- integer 1x^4+-1x^0
+```
+
+the command line tool expects inputs like `ax^n+bx^m+...` any deviation from this will result in sadness.
