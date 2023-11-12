@@ -135,7 +135,7 @@ liftPair_ f lu (a,b) (g,h) =
     where
         -- beta = ( 1 - gamma ) // alpha
         betainv = fromInteger @(FiniteCyclicRing pk1) (leadingCoeff lu)
-        beta = monomial (1 // betainv) 0
+        beta = monomial (tryInvert betainv) 0
 
         delta = toInteger $ toRing $ f - lu * g * h
 

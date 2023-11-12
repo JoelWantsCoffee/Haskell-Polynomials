@@ -99,17 +99,21 @@ instance Ring r => Ring (Polynomial r) where
 
 
 instance (GCDD r, ED r) => GCDD (Polynomial r) where
-    gcd_ :: ED r => Polynomial r -> Polynomial r -> Polynomial r
-    gcd_ f g    | f == 0 = g
-                | g == 0 = f
-                | degree g < 1 = base
-                -- | (0 /=) $ (leadingCoeff f_) % (leadingCoeff g_) = base
-                | otherwise = expand $ base * (gcd_ g_ r)
-                where
-                    (fc, f_) = primitivePart f
-                    (gc, g_) = primitivePart g
-                    r = snd $ polyDivMod ((monomial (leadingCoeff g_) 0) * f_) g_
-                    base = monomial (gcd_ fc gc) 0
+    gcd_ :: (GCDD r, ED r) => Polynomial r -> Polynomial r -> Polynomial r
+    gcd_ f g
+        | g == 0 = f
+        | f == 0 = g
+        | degree f < 1 = base
+        | degree g < 1 = base
+        | otherwise = expand $ base * (gcd_ g0 r0)
+        where
+            (cf, f0) = primitivePart f
+            (cg, g0) = primitivePart g
+            ( _, r0) = 
+                primitivePart 
+                . snd 
+                $ polyDivMod (f0 * monomial (leadingCoeff g0) 0) g0
+            base = monomial (gcd_ cf cg) 0
 
 
 instance (ED r, Field r) => ED (Polynomial r) where
@@ -171,16 +175,18 @@ degree_expanded_unsafe (Product p1 p2) = degree p1 + degree p2
 
 
 primitivePart :: (GCDD r, ED r) => Polynomial r -> (r, Polynomial r)
-primitivePart p_ = (c, (flip (//) c) <$> p)
+primitivePart p_ 
+    | p == 0 = (0, 0)
+    | otherwise = (c, (// c) <$> p)
     where
         c = foldr1 gcd_ . fmap fst . toList $ p
         p = expand p_
 
 
-coercemonic :: ED r => Polynomial r -> (r, Polynomial r)
+coercemonic :: Ring r => Polynomial r -> (r, Polynomial r)
 coercemonic p = if isUnit lc then (lc, (monomial lcinv 0) * p) else (1, p)
     where
-        lcinv = 1 // lc
+        lcinv = tryInvert lc
         lc = leadingCoeff p
 
 
@@ -213,7 +219,7 @@ divide a_ b_ = divide_expanded_unsafe (expand a_) (expand b_)
         divide_expanded_unsafe a b
             | degree_expanded_unsafe a < degree_expanded_unsafe b = 0
             | q == 0 = 0
-            | otherwise = (+) q $ divide_expanded_unsafe r b
+            | otherwise = q + divide_expanded_unsafe r b
             where
                 q = Monomial (leadingCoeff a // leadingCoeff b) (degree_expanded_unsafe a - degree_expanded_unsafe b)
                 r = expand $ a - (q * b)
@@ -263,7 +269,7 @@ polyDivMod a_ b_ = polyDivMod_expanded_unsafe (expand a_) (expand b_)
             | otherwise = (Monomial (c // c') (d - d'), Monomial (c % c') d)
         polyDivMod_expanded_unsafe a b
             | degree_expanded_unsafe a < degree_expanded_unsafe b = (0, a)
-            | q == 0 = (0, r)
+            | q == 0 = (0, a)
             | otherwise = (\(q', r') -> (expand $ q + q', r')) $ polyDivMod_expanded_unsafe r b
             where
                 q = Monomial (leadingCoeff a // leadingCoeff b) (degree_expanded_unsafe a - degree_expanded_unsafe b)

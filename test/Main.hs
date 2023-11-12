@@ -22,9 +22,9 @@ assertFactoring p lst = assertEqual errorMessage expected actual
 
 tests :: TestTree
 tests = testGroup "Tests"
-    [ testCase "Simple factorization" testSimpleFactor
-    , testCase "More factorization tests" testMoreFactors
-    -- , testCase "Even More factorization tests" testEvenMore
+    [ testCase "Simple factorisation" testSimpleFactor
+    , testCase "More factorisation tests" testMoreFactors
+    -- , testCase "Even More factorisation tests" testEvenMore
     ]
 
 testSimpleFactor :: Assertion
